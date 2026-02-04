@@ -1,0 +1,310 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+/* For Code look */
+
+/* --- GLOBAL RESET --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.login-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    background-color: #fff;
+}
+
+/* --- LEFT SIDE: Professional Tech Theme --- */
+.login-left {
+    flex: 1.1;
+    position: relative;
+    overflow: hidden;
+    /* Dark Tech Background (Like HackerRank Dark Mode) */
+    background-color: #0e1c2f;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+/* Background Pattern (Subtle Grid) */
+.tech-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        radial-gradient(#1f2f45 15%, transparent 16%),
+        radial-gradient(#1f2f45 15%, transparent 16%);
+    background-size: 30px 30px;
+    background-position: 0 0, 15px 15px;
+    opacity: 0.5;
+}
+
+/* Content Container */
+.tech-overlay {
+    z-index: 10;
+    max-width: 400px;
+    padding: 40px;
+}
+
+/* Code Snippet Look */
+.code-snippet {
+    font-family: 'Fira Code', monospace;
+    /* Coding Font */
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #00c853;
+    /* HackerRank Green */
+    margin-bottom: 30px;
+    color: #a4b1cd;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    backdrop-filter: blur(5px);
+}
+
+.tech-overlay h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 15px;
+    background: linear-gradient(to right, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.tech-overlay p {
+    font-size: 1.1rem;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* Abstract Shapes (Professional, not childish) */
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.6;
+}
+
+.shape-1 {
+    width: 300px;
+    height: 300px;
+    background: #1d4ed8;
+    /* Deep Blue Glow */
+    top: -50px;
+    left: -50px;
+}
+
+.shape-2 {
+    width: 400px;
+    height: 400px;
+    background: #00c853;
+    /* Tech Green Glow */
+    bottom: -100px;
+    right: -100px;
+    opacity: 0.3;
+}
+
+/* Hide Left Side on Mobile */
+@media (max-width: 900px) {
+    .login-left {
+        display: none;
+    }
+}
+
+/* --- RIGHT SIDE (Clean Form) --- */
+.login-right {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    background: #ffffff;
+}
+
+.login-container-right {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-icon {
+    font-size: 40px;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 10px;
+}
+
+.sub-text {
+    color: #6b7280;
+    font-size: 16px;
+    margin-bottom: 35px;
+}
+
+/* Input Styles */
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #374151;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    background-color: #f9fafb;
+}
+
+.input-group input:focus {
+    border-color: #2563eb;
+    background-color: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Password & Actions */
+.password-wrapper {
+    position: relative;
+}
+
+.eye-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    font-size: 14px;
+}
+
+.remember-me {
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.forgot-link {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* Buttons */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background-color: #111827;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #000;
+    transform: translateY(-1px);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 25px 0;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+    padding: 0 10px;
+}
+
+.btn-google {
+    width: 100%;
+    padding: 12px;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s;
+}
+
+.btn-google:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.error-msg {
+    color: #ef4444;
+    font-size: 14px;
+    margin-bottom: 15px;
+    background-color: #fef2f2;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #fee2e2;
+}
+
+.signup-text {
+    text-align: center;
+    margin-top: 30px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.signup-text a {
+    color: #111827;
+    font-weight: 600;
+    text-decoration: none;
+}

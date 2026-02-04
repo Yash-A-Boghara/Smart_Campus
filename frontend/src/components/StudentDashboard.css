@@ -1,0 +1,343 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* --- MAIN CONTAINER --- */
+.std-container {
+    display: flex;
+    height: 100vh;
+    background-color: #f8fafc;
+    font-family: 'Inter', sans-serif;
+}
+
+/* --- SIDEBAR --- */
+.std-sidebar {
+    width: 250px;
+    background-color: white;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.std-sidebar .logo {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.std-sidebar nav button {
+    width: 100%;
+    text-align: left;
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    background: none;
+    border: none;
+    color: #64748b;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.std-sidebar nav button:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.std-sidebar nav button.active {
+    background-color: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+.logout-link {
+    margin-top: auto;
+    background: none;
+    border: none;
+    color: #ef4444;
+    text-align: left;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* --- MAIN CONTENT AREA --- */
+.std-main {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+/* Welcome Banner */
+.welcome-banner {
+    background: linear-gradient(to right, #2563eb, #1d4ed8);
+    color: white;
+    padding: 30px;
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+}
+
+.welcome-banner h2 {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+}
+
+.welcome-banner p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.date-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+/* Stats Cards */
+.stats-grid {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.std-container .card {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.std-container .card h3 {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+.std-container .card p {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.sub-text {
+    font-size: 12px;
+    color: #10b981;
+    font-weight: 500;
+}
+
+/* Section Box */
+.section-box {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.section-box h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #0f172a;
+}
+
+/* Classroom Grid */
+.classroom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.assignment-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px;
+    background: #fafafa;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.subject-tag {
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.due-date {
+    font-size: 12px;
+    color: #ef4444;
+    font-weight: 500;
+}
+
+.assignment-card h4 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+}
+
+.assignment-card p {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 10px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.action-btn.outline {
+    background: white;
+    border: 1px solid #0f172a;
+    color: #0f172a;
+}
+
+/* --- FORMS & TABLES --- */
+.primary-btn {
+    padding: 10px 20px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.primary-btn:hover {
+    background: #1d4ed8;
+}
+
+.std-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.std-table th {
+    text-align: left;
+    padding: 12px;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #64748b;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.std-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+/* Status Badges */
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status.approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status.open {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.std-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 100%;
+}
+
+.std-form input,
+.std-form select,
+.std-form textarea {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    width: 100%;
+}
+
+/* --- EDIT / DELETE BUTTONS --- */
+.sm-btn {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 8px;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.sm-btn.edit {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+.sm-btn.edit:hover {
+    background-color: #cbd5e1;
+}
+
+.sm-btn.del {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.sm-btn.del:hover {
+    background-color: #fecaca;
+}
+
+.cancel-btn {
+    padding: 10px 15px;
+    background: #e2e8f0;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.cancel-btn:hover {
+    background: #cbd5e1;
+}
+
+.card.red {
+    border-top: 4px solid #f70505;
+}
