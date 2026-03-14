@@ -113,13 +113,35 @@ const AdminDashboard = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let newFormData = { ...formData, [name]: value };
+
+    // Auto-fill department based on ID
+    if (name === "custom_id" && value && formData.role === "Student") {
+      const parsed = parseStudentId(value);
+      if (parsed.valid) {
+        newFormData.department = parsed.department;
+      } else {
+        newFormData.department = ""; // clear if invalid
+      }
+    }
+
+    setFormData(newFormData);
   };
 
   // --- FIXED: HANDLE SUBMIT BUTTON ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Prevent submission if Student ID is invalid
+    if (formData.role === "Student") {
+      const parsed = parseStudentId(formData.custom_id);
+      if (!parsed.valid) {
+        alert("Please enter a valid Student ID before saving. Review the red warnings in the form.");
+        return;
+      }
+    }
+
     try {
       const url = isEditMode 
         ? `http://localhost:5000/api/users/${formData.custom_id}` 
@@ -264,7 +286,7 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 {userList.length === 0 ? (
-                  <tr><td colSpan="5" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
                 ) : (
                   userList.map((user) => (
                     <tr key={user.custom_id}>

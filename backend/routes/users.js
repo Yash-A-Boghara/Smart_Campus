@@ -87,6 +87,9 @@ router.post('/users', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Auto-assign class for students based on enrollment ID
+    const className = role === 'Student' ? assignSection(custom_id) : null;
+
     const { data, error } = await supabase
       .from('users')
       .insert([{
