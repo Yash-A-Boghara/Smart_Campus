@@ -2,6 +2,54 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 
+// ─── AUTO-SECTION PREVIEW (mirrors backend logic) ─────────────────────────
+// ─── AUTO-SECTION PREVIEW (mirrors backend logic) ─────────────────────────
+const parseStudentId = (enrollmentId) => {
+  if (!enrollmentId) return { valid: false, hasInput: false, reason: 'empty' };
+  const id = enrollmentId.toUpperCase().trim();
+  const match = id.match(/^(\d{2})[A-Z]?([A-Z]{2})(\d{3,})$/);
+  if (!match) return { valid: false, hasInput: true, reason: 'format' };
+  
+  const adminYear = parseInt(match[1], 10);
+  const branch = match[2];
+  const roll = parseInt(match[3], 10);
+
+  const deptMap = {
+    'CE': 'Computer Engineering',
+    'CS': 'Computer Science Engineering',
+    'IT': 'Information Technology',
+    'ME': 'Mechanical Engineering',
+    'EC': 'Electronics & Communication'
+  };
+
+  if (!deptMap[branch]) return { valid: false, hasInput: true, reason: 'branch' };
+
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear() % 100; // e.g., 2026 -> 26
+  const currentMonth = currentDate.getMonth() + 1; // 1-12 (June is 6)
+
+  // Prevent registering the upcoming batch before June
+  if (adminYear > currentYear || (adminYear === currentYear && currentMonth < 6)) {
+    return { valid: false, hasInput: true, department: deptMap[branch], reason: 'future_batch', adminYear };
+  }
+
+  // Prevent registering batches that have already graduated (more than 4 years ago)
+  if (adminYear < currentYear - 4) {
+    return { valid: false, hasInput: true, department: deptMap[branch], reason: 'year' };
+  }
+
+  let semester = (currentYear - adminYear) * 2 + (currentMonth >= 6 ? 1 : 0);
+  if (semester < 1) semester = 1;
+  if (semester > 8) semester = 8; // Max 8 semesters
+
+  let section = null;
+  if (roll >= 1 && roll <= 74) section = `${semester}${branch}1`;
+  else if (roll >= 75 && roll <= 150) section = `${semester}${branch}2`;
+  else return { valid: false, hasInput: true, department: deptMap[branch], reason: 'roll' };
+
+  return { valid: true, hasInput: true, department: deptMap[branch], class: section };
+};
+
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -55,13 +103,35 @@ const AdminDashboard = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let newFormData = { ...formData, [name]: value };
+
+    // Auto-fill department based on ID
+    if (name === "custom_id" && value && formData.role === "Student") {
+      const parsed = parseStudentId(value);
+      if (parsed.valid) {
+        newFormData.department = parsed.department;
+      } else {
+        newFormData.department = ""; // clear if invalid
+      }
+    }
+
+    setFormData(newFormData);
   };
 
   // --- FIXED: HANDLE SUBMIT BUTTON ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Prevent submission if Student ID is invalid
+    if (formData.role === "Student") {
+      const parsed = parseStudentId(formData.custom_id);
+      if (!parsed.valid) {
+        alert("Please enter a valid Student ID before saving. Review the red warnings in the form.");
+        return;
+      }
+    }
+
     try {
       const url = isEditMode 
         ? `http://localhost:5000/api/users/${formData.custom_id}` 
@@ -178,12 +248,13 @@ const AdminDashboard = () => {
                   <th>Full Name</th>
                   <th>Email</th>
                   <th>Department</th>
+                  <th>Class / Section</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {userList.length === 0 ? (
-                  <tr><td colSpan="5" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
                 ) : (
                   userList.map((user) => (
                     <tr key={user.custom_id}>
@@ -191,6 +262,12 @@ const AdminDashboard = () => {
                       <td>{user.full_name}</td>
                       <td style={{ fontSize: "0.85rem", color: "#666" }}>{user.email || "—"}</td>
                       <td>{user.department || "—"}</td>
+                      <td>
+                        {user.role === "Student" && user.class
+                          ? <span style={{ background: "#dbeafe", color: "#1d4ed8", borderRadius: "6px", padding: "2px 10px", fontSize: "12px", fontWeight: 700 }}>{user.class}</span>
+                          : <span style={{ color: "#9ca3af" }}>—</span>
+                        }
+                      </td>
                       <td>
                         <button className="edit-btn" onClick={() => handleEdit(user)}>Edit</button>
                         <button className="delete-btn" onClick={() => handleDelete(user.custom_id)}>Delete</button>
@@ -322,14 +399,74 @@ const AdminDashboard = () => {
                     <option value="Librarian">Librarian</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Department</label>
-                  <input name="department" value={formData.department} onChange={handleChange} placeholder="e.g. Computer Engineering" />
-                </div>
+                {formData.role === "Student" ? (
+                  <>
+                    <div className="form-group">
+                      <label>Department</label>
+                      {(() => {
+                        const parsed = parseStudentId(formData.custom_id);
+                        if (!parsed.hasInput) return <div style={{ padding: "10px 14px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px", color: "#9ca3af", fontSize: "14px" }}>Auto-filled from ID</div>;
+                        if (parsed.reason === 'format' || parsed.reason === 'branch') return <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "14px" }}>⚠️ Invalid ID format</div>;
+                        return <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", fontWeight: 600, color: "#166534", fontSize: "14px" }}>🏛️ {parsed.department}</div>;
+                      })()}
+                    </div>
+                    <div className="form-group">
+                      <label>Class</label>
+                      {(() => {
+                        const parsed = parseStudentId(formData.custom_id);
+                        if (parsed.valid) {
+                          return <div style={{ padding: "10px 14px", background: "#eff6ff", border: "1.5px solid #93c5fd", borderRadius: "8px", fontWeight: 700, color: "#1d4ed8", fontSize: "15px" }}>✅ {parsed.class}</div>;
+                        }
+                        
+                        return (
+                          <>
+                            <div style={{ padding: "10px 12px", background: "#ffffff", border: "1px solid #d1d5db", borderRadius: "8px", minHeight: "60px", color: "#9ca3af", fontSize: "14px", lineHeight: "1.5", marginBottom: parsed.reason !== 'empty' && parsed.reason !== 'branch' && parsed.reason !== 'format' ? '12px' : '0' }}>
+                              Enter a valid Student ID above (e.g. 24DCE001)<br/>to auto-preview...
+                            </div>
+                            
+                            {parsed.reason === 'future_batch' && (
+                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "12px", display: "flex", gap: "6px" }}>
+                                <span>⚠️</span>
+                                <span>Cannot register 20{parsed.adminYear} batch students before June. Admissions open in June.</span>
+                              </div>
+                            )}
+                            {parsed.reason === 'year' && (
+                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "12px", display: "flex", gap: "6px" }}>
+                                <span>⚠️</span>
+                                <span>Invalid Admission Year (Too old or invalid)</span>
+                              </div>
+                            )}
+                            {parsed.reason === 'roll' && (
+                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "12px", display: "flex", gap: "6px" }}>
+                                <span>⚠️</span>
+                                <span>Invalid Roll (001-150)</span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </>
+                ) : (
+                  <div className="form-group">
+                    <label>Department</label>
+                    <input name="department" value={formData.department} onChange={handleChange} placeholder="e.g. Administration" />
+                  </div>
+                )}
 
                 <div className="modal-actions">
                   <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="save-btn">{isEditMode ? "Update" : "Save"}</button>
+                  <button 
+                    type="submit" 
+                    className="save-btn"
+                    disabled={formData.role === "Student" && !parseStudentId(formData.custom_id).valid}
+                    style={{
+                      opacity: (formData.role === "Student" && !parseStudentId(formData.custom_id).valid) ? 0.5 : 1,
+                      cursor: (formData.role === "Student" && !parseStudentId(formData.custom_id).valid) ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {isEditMode ? "Update" : "Save"}
+                  </button>
                 </div>
               </form>
             </div>
