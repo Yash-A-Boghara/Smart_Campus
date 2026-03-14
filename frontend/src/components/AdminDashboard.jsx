@@ -5,6 +5,8 @@ import "./AdminDashboard.css";
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [filterRole, setFilterRole] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Modal States
   const [showModal, setShowModal] = useState(false);
@@ -144,42 +146,125 @@ const AdminDashboard = () => {
           </>
         );
 
-      case "manage-users":
-        return (
-          <div className="table-section">
-            <div className="section-header">
-               <h3>All Registered Users</h3>
-               <button className="add-btn" onClick={handleAddNew}>+ Add New User</button>
-            </div>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Role</th>
-                    <th>Department</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user._id}>
+      case "manage-users": {
+        const roles = ["All", "Student", "Faculty", "Admin", "Librarian", "Peon"];
+        const roleIcons = { All: "👥", Student: "🎓", Faculty: "👨‍🏫", Admin: "⚡", Librarian: "📚", Peon: "🧹" };
+
+        // Apply search + role filter
+        const filtered = users.filter((u) => {
+          const matchRole = filterRole === "All" || u.role === filterRole;
+          const q = searchQuery.toLowerCase();
+          const matchSearch =
+            !q ||
+            (u.full_name || "").toLowerCase().includes(q) ||
+            (u.custom_id || "").toLowerCase().includes(q) ||
+            (u.department || "").toLowerCase().includes(q) ||
+            (u.email || "").toLowerCase().includes(q);
+          return matchRole && matchSearch;
+        }).sort((a, b) => (a.custom_id || "").localeCompare(b.custom_id || ""));
+
+
+        // Group by role for "All" view
+        const groupedRoles = filterRole === "All"
+          ? ["Student", "Faculty", "Admin", "Librarian", "Peon"]
+          : [filterRole];
+
+        const UserTable = ({ userList }) => (
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Full Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userList.length === 0 ? (
+                  <tr><td colSpan="5" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
+                ) : (
+                  userList.map((user) => (
+                    <tr key={user.custom_id}>
                       <td><strong>{user.custom_id}</strong></td>
                       <td>{user.full_name}</td>
-                      <td><span className={`badge ${user.role ? user.role.toLowerCase() : 'student'}`}>{user.role}</span></td>
-                      <td>{user.department || "N/A"}</td>
+                      <td style={{ fontSize: "0.85rem", color: "#666" }}>{user.email || "—"}</td>
+                      <td>{user.department || "—"}</td>
                       <td>
                         <button className="edit-btn" onClick={() => handleEdit(user)}>Edit</button>
                         <button className="delete-btn" onClick={() => handleDelete(user.custom_id)}>Delete</button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         );
+
+        return (
+          <div className="table-section">
+            {/* Header */}
+            <div className="section-header">
+              <h3>Manage Users <span style={{ fontWeight: 400, fontSize: "0.9rem", color: "#888" }}>({filtered.length} found)</span></h3>
+              <button className="add-btn" onClick={handleAddNew}>+ Add New User</button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="user-search-bar">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search by name, ID, email or department..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button className="clear-search" onClick={() => setSearchQuery("")}>✕</button>
+              )}
+            </div>
+
+            {/* Role Filter Tabs */}
+            <div className="role-filter-tabs">
+              {roles.map((role) => {
+                const count = role === "All" ? users.length : users.filter(u => u.role === role).length;
+                return (
+                  <button
+                    key={role}
+                    className={`role-tab ${filterRole === role ? "active" : ""} role-tab-${role.toLowerCase()}`}
+                    onClick={() => setFilterRole(role)}
+                  >
+                    <span>{roleIcons[role]}</span>
+                    <span>{role}</span>
+                    <span className="role-count">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* User Tables - Grouped by Role */}
+            {filterRole === "All" ? (
+              groupedRoles.map((role) => {
+                const groupUsers = filtered.filter(u => u.role === role);
+                if (groupUsers.length === 0) return null;
+                return (
+                  <div key={role} className="role-group">
+                    <div className="role-group-header">
+                      <span>{roleIcons[role]}</span>
+                      <h4>{role}s</h4>
+                      <span className={`badge ${role.toLowerCase()}`}>{groupUsers.length}</span>
+                    </div>
+                    <UserTable userList={groupUsers} />
+                  </div>
+                );
+              })
+            ) : (
+              <UserTable userList={filtered} />
+            )}
+          </div>
+        );
+      }
       default: return <div>Coming Soon</div>;
     }
   };

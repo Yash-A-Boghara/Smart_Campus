@@ -375,3 +375,151 @@ tr:last-child td {
 .save-btn:hover {
     background: #000;
 }
+
+/* ===================== */
+/* MANAGE USERS - SEARCH */
+/* ===================== */
+
+.user-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 18px;
+    transition: border-color 0.2s;
+}
+
+.user-search-bar:focus-within {
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.user-search-bar .search-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.user-search-bar input {
+    border: none;
+    background: transparent;
+    outline: none;
+    flex: 1;
+    font-size: 14px;
+    color: #111827;
+    font-family: 'Inter', sans-serif;
+}
+
+.user-search-bar input::placeholder {
+    color: #9ca3af;
+}
+
+.clear-search {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.clear-search:hover {
+    color: #ef4444;
+}
+
+/* ========================= */
+/* MANAGE USERS - ROLE TABS  */
+/* ========================= */
+
+.role-filter-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.role-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.role-tab:hover {
+    border-color: #9ca3af;
+    color: #111827;
+    background: #f9fafb;
+}
+
+.role-count {
+    background: #e5e7eb;
+    color: #374151;
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+
+/* Active state - All */
+.role-tab.active {
+    background: #111827;
+    border-color: #111827;
+    color: #fff;
+}
+
+.role-tab.active .role-count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+}
+
+/* Per-role accent colors on active */
+.role-tab-student.active  { background: #059669; border-color: #059669; }
+.role-tab-faculty.active  { background: #6d28d9; border-color: #6d28d9; }
+.role-tab-admin.active    { background: #dc2626; border-color: #dc2626; }
+.role-tab-librarian.active{ background: #d97706; border-color: #d97706; }
+.role-tab-peon.active     { background: #374151; border-color: #374151; }
+
+/* ========================== */
+/* MANAGE USERS - ROLE GROUPS */
+/* ========================== */
+
+.role-group {
+    margin-bottom: 28px;
+}
+
+.role-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.role-group-header span:first-child {
+    font-size: 20px;
+}
+
+.role-group-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    flex: 1;
+}

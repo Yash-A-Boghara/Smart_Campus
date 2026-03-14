@@ -1,0 +1,573 @@
+/* ================================================== */
+/*        FACULTY CLASSROOM CSS                       */
+/* ================================================== */
+
+/* ---- CLASS CARDS GRID ---- */
+.cls-home { padding: 0; }
+
+.cls-home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.cls-home-header h3 {
+  font-size: 20px;
+  color: #111827;
+  margin: 0;
+}
+
+.cls-create-btn {
+  padding: 10px 20px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cls-create-btn:hover { background: #1557b0; }
+
+.cls-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.cls-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.cls-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.cls-card-banner {
+  padding: 24px 20px 16px;
+  color: white;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.cls-card-banner h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.cls-card-banner p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.cls-card-body {
+  padding: 12px 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid #f3f4f6;
+  flex: 1;
+}
+
+.cls-card-code {
+  font-size: 13px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.cls-card-room {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.cls-card-footer {
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cls-open-btn {
+  background: none;
+  border: none;
+  color: #1a73e8;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.cls-del-cls-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.cls-del-cls-btn:hover { color: #ef4444; }
+
+/* ---- EMPTY STATE ---- */
+.cls-empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.cls-empty-icon { font-size: 64px; margin-bottom: 16px; }
+.cls-empty-state h3 { color: #374151; margin-bottom: 8px; }
+.cls-empty { color: #9ca3af; font-size: 14px; text-align: center; padding: 30px 0; }
+
+/* ---- INNER CLASSROOM ---- */
+.cls-inner { padding: 0; }
+
+.cls-banner {
+  border-radius: 12px;
+  padding: 56px 32px 28px; /* Increased top padding to avoid overlap with back button */
+  color: white;
+  margin-bottom: 0;
+  position: relative;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.cls-back-btn {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.cls-back-btn:hover { background: rgba(255,255,255,0.35); }
+
+.cls-banner-info h2 { margin: 0 0 4px; font-size: 26px; }
+.cls-banner-info p { margin: 0 0 10px; opacity: 0.85; font-size: 14px; }
+
+.cls-code-badge {
+  background: rgba(255,255,255,0.2);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: inline-block;
+}
+
+/* Sub-tabs */
+.cls-subtabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+.cls-subtab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+  text-transform: capitalize;
+}
+
+.cls-subtab:hover { color: #111827; }
+.cls-subtab.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+
+/* ---- STREAM ---- */
+.cls-stream { display: flex; flex-direction: column; gap: 16px; }
+
+.cls-post-box {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.cls-post-box:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+.cls-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #1a73e8;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.cls-post-placeholder { color: #9ca3af; font-size: 15px; }
+
+.cls-post-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cls-action-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cls-action-btn.asgn { background: #ede9fe; color: #6d28d9; }
+.cls-action-btn.asgn:hover { background: #6d28d9; color: white; }
+.cls-action-btn.mat { background: #dcfce7; color: #15803d; }
+.cls-action-btn.mat:hover { background: #15803d; color: white; }
+.cls-action-btn.ann { background: #dbeafe; color: #1d4ed8; }
+.cls-action-btn.ann:hover { background: #1d4ed8; color: white; }
+
+/* Feed cards */
+.cls-feed-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.cls-feed-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.cls-feed-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cls-feed-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.cls-feed-time { font-size: 12px; color: #9ca3af; margin-left: 6px; }
+
+.cls-type-badge {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-ann { background: #dbeafe; color: #1d4ed8; }
+.badge-asgn { background: #ede9fe; color: #6d28d9; }
+.badge-mat { background: #dcfce7; color: #15803d; }
+
+.cls-del-post {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #d1d5db;
+  font-size: 16px;
+  padding: 4px;
+  transition: color 0.2s;
+  margin-left: 6px;
+}
+.cls-del-post:hover { color: #ef4444; }
+
+.cls-feed-title { margin: 0 0 8px; color: #111827; font-size: 16px; }
+.cls-feed-desc { margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5; }
+
+.cls-feed-meta {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.cls-view-subs-btn {
+  margin-left: auto;
+  padding: 6px 14px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.cls-view-subs-btn:hover { background: #0369a1; color: white; }
+
+/* ---- CLASSWORK ---- */
+.cls-classwork-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cls-classwork-header h3 { margin: 0; font-size: 18px; color: #111827; }
+
+.cls-classwork-btns { display: flex; gap: 8px; }
+
+.cls-work-group { margin-bottom: 24px; }
+
+.cls-work-group-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.cls-work-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: box-shadow 0.2s;
+}
+.cls-work-item:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+
+.cls-work-item-left { display: flex; align-items: center; gap: 12px; }
+.cls-work-icon { font-size: 20px; }
+.cls-work-due { display: block; font-size: 12px; color: #9ca3af; margin-top: 2px; }
+.cls-work-item-right { display: flex; gap: 10px; align-items: center; }
+.cls-pts { background: #f3f4f6; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #374151; }
+
+.cls-del-work {
+  background: none; border: none; cursor: pointer;
+  color: #d1d5db; font-size: 15px; transition: color 0.2s;
+}
+.cls-del-work:hover { color: #ef4444; }
+
+/* ---- PEOPLE ---- */
+.cls-people { padding: 0; }
+.cls-people-section { margin-bottom: 32px; }
+.cls-people-section h4 { font-size: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.cls-people-count { background: #e5e7eb; color: #374151; border-radius: 999px; padding: 2px 8px; font-size: 13px; font-weight: 700; }
+
+.cls-person-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cls-p-avatar {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: #6b7280;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.cls-p-id { display: block; font-size: 12px; color: #9ca3af; margin-top: 2px; }
+
+/* ---- MODALS ---- */
+.cls-modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 2000;
+}
+
+.cls-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 480px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  animation: modalFade 0.2s ease;
+}
+
+.cls-modal-wide { width: 700px; }
+
+@keyframes modalFade {
+  from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cls-modal h2 { margin: 0 0 20px; font-size: 20px; color: #111827; }
+
+.cls-form-group { margin-bottom: 16px; }
+.cls-form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: #374151; }
+.cls-form-group input, .cls-form-group textarea, .cls-form-group select {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid #d1d5db; border-radius: 8px;
+  font-size: 14px; font-family: 'Inter', sans-serif;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.cls-form-group input:focus, .cls-form-group textarea:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
+
+.cls-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.cls-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+.cls-cancel-btn {
+  padding: 10px 20px; background: #f3f4f6; color: #374151;
+  border: none; border-radius: 8px; cursor: pointer; font-weight: 500;
+}
+.cls-cancel-btn:hover { background: #e5e7eb; }
+
+.cls-submit-btn {
+  padding: 10px 24px; background: #1a73e8; color: white;
+  border: none; border-radius: 8px; cursor: pointer; font-weight: 600;
+}
+.cls-submit-btn:hover { background: #1557b0; }
+
+/* Post type tabs inside modal */
+.cls-post-type-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.cls-type-tab {
+  flex: 1; padding: 8px 12px;
+  border: 1.5px solid #e5e7eb; border-radius: 8px;
+  background: white; color: #6b7280; font-size: 13px;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.cls-type-tab.active { border-color: #1a73e8; color: #1a73e8; background: #eff6ff; font-weight: 600; }
+
+/* Submissions table */
+.cls-subs-meta { color: #6b7280; font-size: 13px; margin-bottom: 16px; }
+.cls-subs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cls-subs-table th { text-align: left; padding: 10px 12px; background: #f9fafb; color: #6b7280; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #e5e7eb; }
+.cls-subs-table td { padding: 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+.cls-sub-content { max-width: 200px; font-size: 13px; color: #374151; }
+.cls-sub-status { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.cls-sub-status.submitted { background: #dbeafe; color: #1d4ed8; }
+.cls-sub-status.graded { background: #dcfce7; color: #15803d; }
+.cls-grade-btn {
+  padding: 5px 12px; background: #eff6ff; border: 1px solid #bae6fd;
+  color: #0369a1; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;
+}
+.cls-grade-btn:hover { background: #0369a1; color: white; }
+
+.cls-sub-answer-box {
+  background: #f9fafb; border: 1px solid #e5e7eb;
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+}
+.cls-sub-answer-box label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; }
+.cls-sub-answer-box p { margin: 0; font-size: 14px; color: #374151; }
+
+/* ---- FILE PREVIEW MODAL ---- */
+.cls-preview-modal {
+  background: white;
+  border-radius: 12px;
+  width: 900px;
+  max-width: 95vw;
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  animation: modalFade 0.2s ease;
+}
+
+.cls-preview-header {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cls-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+}
+.cls-close-btn:hover { color: #111827; }
+
+.cls-preview-body {
+  padding: 24px;
+  background: #111827;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cls-preview-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cls-download-btn {
+  padding: 10px 20px;
+  background: #1a73e8;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.2s;
+  display: inline-block;
+}
+.cls-download-btn:hover { background: #1557b0; }

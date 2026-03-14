@@ -15,6 +15,10 @@ const userRoutes = require('./routes/users');
 const assignmentRoutes = require('./routes/assignments');
 const leaveRoutes = require('./routes/leaves');
 const complaintRoutes = require('./routes/complaints');
+const classroomRoutes = require('./routes/classrooms');
+const classroomPostRoutes = require('./routes/classroom_posts');
+const submissionRoutes = require('./routes/submissions');
+const uploadRoutes = require('./routes/uploads');
 
 // Register routes
 app.use('/api', authRoutes);
@@ -22,6 +26,11 @@ app.use('/api', userRoutes);
 app.use('/api', assignmentRoutes);
 app.use('/api', leaveRoutes);
 app.use('/api', complaintRoutes);
+app.use('/api', classroomRoutes);
+app.use('/api', classroomPostRoutes);
+app.use('/api', submissionRoutes);
+app.use('/api', uploadRoutes);
+
 
 // Health check endpoint
 app.get('/', (req, res) => {
