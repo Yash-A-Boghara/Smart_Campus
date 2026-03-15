@@ -3,47 +3,52 @@ const router = express.Router();
 const supabase = require('../config/supabase');
 const bcrypt = require('bcryptjs');
 
-// --- AUTO-ASSIGN CLASS FROM ENROLLMENT ID ---
-// Format: 24DCE001 => year(2) + 'D' + branch(2-3) + roll(3)
-// Supports: CE, CS, IT, ME, EC
-function assignClass(enrollmentId) {
-  if (!enrollmentId) return null;
-  const match = enrollmentId.match(/^(\d{2})D([A-Z]{2,3})(\d{3})$/);
-  if (!match) return null;
-  const admissionYear = parseInt(match[1], 10); // e.g. 24
-  const branch = match[2];                       // e.g. CE
-  const roll = parseInt(match[3], 10);           // e.g. 001 => 1
-  const supported = ['CE', 'CS', 'IT', 'ME', 'EC'];
-  if (!supported.includes(branch)) return null;
-  // Dynamic prefix based on admission year AND current month:
-  // Each academic year has 2 semesters. New year starts in JUNE.
-  // Before June: even semester => (yearDiff * 2)
-  // From June:   odd semester  => (yearDiff * 2) + 1
-  const now = new Date();
-  const currentYear = now.getFullYear() % 100; // e.g. 26
-  const isNewAcademicYear = now.getMonth() >= 5; // June = index 5
-  const yearDiff = currentYear - admissionYear;
-  const semesterPrefix = yearDiff * 2 + (isNewAcademicYear ? 1 : 0);
-  if (semesterPrefix <= 0) return null; // future or invalid
-  if (roll >= 1  && roll <= 74)  return `${semesterPrefix}${branch}1`;
-  if (roll >= 75 && roll <= 150) return `${semesterPrefix}${branch}2`;
-  return null;
-}
+// ─── AUTO-SECTION ALLOCATION ───────────────────────────────────────────────
+// Enrollment ID format: 24DCE001  →  year=24, prefix=D, branch=CE, roll=001
+// Semester calculation (assuming current year 2026):
+//   year 25 -> (26 - 25) * 2 = Sem 2  (e.g., 2CE1)
+//   year 24 -> (26 - 24) * 2 = Sem 4  (e.g., 4CE1)
+const KNOWN_BRANCHES = ['CE', 'CS', 'IT', 'ME', 'EC'];
 
-// --- AUTO-ASSIGN DEPARTMENT FROM BRANCH CODE ---
-function assignDepartment(enrollmentId) {
+const assignSection = (enrollmentId) => {
   if (!enrollmentId) return null;
-  const match = enrollmentId.match(/^\d{2}D([A-Z]{2,3})\d{3}$/);
+  const id = enrollmentId.toUpperCase().trim();
+
+  // Try to extract year, branch and roll number
+  // Pattern: year(2 digits) + optional letter + branch(2 letters) + roll(3+ digits)
+  const match = id.match(/^(\d{2})[A-Z]?([A-Z]{2})(\d{3,})$/);
   if (!match) return null;
-  const departmentMap = {
-    CE: 'Computer Engineering',
-    CS: 'Computer Science',
-    IT: 'Information Technology',
-    ME: 'Mechanical Engineering',
-    EC: 'Electronics & Communication',
-  };
-  return departmentMap[match[1]] || null;
-}
+
+  const adminYear = parseInt(match[1], 10);
+  const branch = match[2];
+  const roll = parseInt(match[3], 10);
+
+  if (!KNOWN_BRANCHES.includes(branch)) return null;
+
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear() % 100; // e.g., 2026 -> 26
+  const currentMonth = currentDate.getMonth() + 1; // 1-12 (June is 6)
+
+  // Prevent registering the upcoming batch before June
+  if (adminYear > currentYear || (adminYear === currentYear && currentMonth < 6)) {
+    return null;
+  }
+
+  // Prevent registering batches that have already graduated (more than 4 years ago)
+  if (adminYear < currentYear - 4) {
+    return null;
+  }
+
+  // Calculate semester using month-aware logic
+  let semester = (currentYear - adminYear) * 2 + (currentMonth >= 6 ? 1 : 0);
+  if (semester < 1) semester = 1;
+  if (semester > 8) semester = 8; // Max 8 semesters
+
+  if (roll >= 1 && roll <= 74)  return `${semester}${branch}1`;
+  if (roll >= 75 && roll <= 150) return `${semester}${branch}2`;
+
+  return null; // out of range
+};
 
 // GET /api/users - Fetch all users
 router.get('/users', async (req, res) => {
@@ -80,12 +85,11 @@ router.post('/users', async (req, res) => {
       }
     }
 
-    // Auto-assign class and department from enrollment ID for students
-    const autoClass = role === 'Student' ? assignClass(custom_id) : null;
-    const autoDepartment = role === 'Student' ? (assignDepartment(custom_id) || department) : department;
-
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Auto-assign class for students based on enrollment ID
+    const className = role === 'Student' ? assignSection(custom_id) : null;
 
     const { data, error } = await supabase
       .from('users')
@@ -95,9 +99,9 @@ router.post('/users', async (req, res) => {
         email,
         password: hashedPassword,
         role,
-        department: autoDepartment,
+        department,
         phone,
-        class: autoClass
+        class: className
       }])
       .select();
 
@@ -120,10 +124,9 @@ router.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { full_name, email, password, role, department, phone } = req.body;
-    // Re-compute class and department from the enrollment ID
-    const autoClass = role === 'Student' ? assignClass(id) : null;
-    const autoDepartment = role === 'Student' ? (assignDepartment(id) || department) : department;
-    const updateData = { full_name, email, role, department: autoDepartment, phone, class: autoClass };
+    // Re-compute class from the enrollment ID
+    const className = role === 'Student' ? assignSection(id) : null;
+    const updateData = { full_name, email, role, department, phone, class: className };
 
     // Only hash and update password if provided
     if (password) {

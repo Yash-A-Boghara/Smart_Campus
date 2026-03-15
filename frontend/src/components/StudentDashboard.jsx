@@ -542,10 +542,10 @@ const StudentDashboard = () => {
                 <label>Your Answer / Work</label>
                 <textarea
                   rows="5"
-                  placeholder="Type your answer here..."
+                  placeholder={submitFiles.length > 0 ? "Add a comment (optional)..." : "Type your answer here..."}
                   value={submitContent}
                   onChange={e => setSubmitContent(e.target.value)}
-                  required
+                  required={submitFiles.length === 0}
                 />
               </div>
               <div className="cls-form-group">

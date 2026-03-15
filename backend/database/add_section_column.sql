@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 -- Run this in Supabase SQL Editor
 -- Ensures the 'class' column exists (no separate 'section' column needed)
 
@@ -19,3 +20,9 @@ SET class = CASE
   ELSE class -- keep existing value if pattern doesn't match
 END
 WHERE role = 'Student';
+=======
+-- Smart Campus: Add section column to users table
+-- Run this once in your Supabase SQL Editor
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS section TEXT;
+>>>>>>> 886f32b3e60d37e2087b4ad644754cb5d3a7d310

@@ -123,4 +123,20 @@ router.delete('/classrooms/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/classrooms/:classroomId/students/:studentId  — remove a student from classroom
+router.delete('/classrooms/:classroomId/students/:studentId', async (req, res) => {
+  try {
+    const { classroomId, studentId } = req.params;
+    const { error } = await supabase
+      .from('classroom_enrollments')
+      .delete()
+      .eq('classroom_id', classroomId)
+      .eq('student_id', studentId);
+    if (error) throw error;
+    res.json({ success: true, message: 'Student removed from classroom' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

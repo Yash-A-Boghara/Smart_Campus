@@ -102,6 +102,25 @@ const FacultyDashboard = () => {
     fetchClassrooms();
   };
 
+  // --- REMOVE STUDENT FROM CLASSROOM ---
+  const handleRemoveStudent = async (studentId, studentName) => {
+    if (!window.confirm(`Remove "${studentName}" from this classroom?`)) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/classrooms/${activeClassroom.id}/students/${studentId}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (data.success) {
+        fetchPeople(activeClassroom.id);
+      } else {
+        alert("Failed to remove student: " + data.message);
+      }
+    } catch (e) {
+      alert("Error removing student.");
+    }
+  };
+
   // --- POST (Announcement / Assignment / Material) ---
   const handlePost = async (e) => {
     e.preventDefault();
@@ -397,10 +416,17 @@ const FacultyDashboard = () => {
                       people.map(p => (
                         <div key={p.id} className="cls-person-row">
                           <div className="cls-p-avatar">{p.student_name[0]}</div>
-                          <div>
+                          <div style={{ flex: 1 }}>
                             <strong>{p.student_name}</strong>
                             <span className="cls-p-id">{p.student_id}</span>
                           </div>
+                          <button
+                            className="cls-remove-student-btn"
+                            title="Remove student from classroom"
+                            onClick={() => handleRemoveStudent(p.student_id, p.student_name)}
+                          >
+                            🗑️ Remove
+                          </button>
                         </div>
                       ))
                     )}
@@ -530,7 +556,7 @@ const FacultyDashboard = () => {
                   </div>
                   <div className="cls-form-group">
                     <label>Due Date</label>
-                    <input type="date" value={postForm.due_date} onChange={e => setPostForm({ ...postForm, due_date: e.target.value })} />
+                    <input type="date" min={new Date().toISOString().split("T")[0]} value={postForm.due_date} onChange={e => setPostForm({ ...postForm, due_date: e.target.value })} />
                   </div>
                 </div>
               )}
@@ -578,8 +604,9 @@ const FacultyDashboard = () => {
                     <tr key={sub.id}>
                       <td><strong>{sub.student_name}</strong><br /><small>{sub.student_id}</small></td>
                       <td className="cls-sub-content">
-                        {sub.content || "—"}
+                        {sub.content && <span>{sub.content}</span>}
                         {renderAttachments(sub.attachments)}
+                        {(!sub.content && (!sub.attachments || sub.attachments.length === 0)) && "—"}
                       </td>
                       <td><span className={`cls-sub-status ${sub.status.toLowerCase()}`}>{sub.status}</span></td>
                       <td>{sub.grade !== null && sub.grade !== undefined ? `${sub.grade} / ${submissionsModal.post.points}` : "—"}</td>
