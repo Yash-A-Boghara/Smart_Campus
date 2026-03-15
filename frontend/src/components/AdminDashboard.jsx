@@ -79,6 +79,21 @@ const assignDepartment = (enrollmentId) => {
   return parsed.valid || parsed.department ? parsed.department : null;
 };
 
+const assignBatch = (enrollmentId) => {
+  if (!enrollmentId) return null;
+  const id = enrollmentId.toUpperCase().trim();
+  const match = id.match(/^(\d{2})[A-Z]?([A-Z]{2})(\d{3,})$/);
+  if (!match) return null;
+  const roll = parseInt(match[3], 10);
+  if (roll >= 1 && roll <= 25) return 'A1';
+  if (roll >= 26 && roll <= 50) return 'B1';
+  if (roll >= 51 && roll <= 75) return 'C1';
+  if (roll >= 76 && roll <= 100) return 'A2';
+  if (roll >= 101 && roll <= 125) return 'B2';
+  if (roll >= 126 && roll <= 150) return 'C2';
+  return null;
+};
+
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -95,7 +110,6 @@ const AdminDashboard = () => {
   const [formData, setFormData] = useState({
     custom_id: "",
     full_name: "",
-    email: "",
     password: "",
     role: "Student",
     department: "",
@@ -142,7 +156,7 @@ const AdminDashboard = () => {
   // --- HANDLERS ---
   
   const handleAddNew = () => {
-    setFormData({ custom_id: "", full_name: "", email: "", password: "", role: "Student", department: "", phone: "", class: "" });
+    setFormData({ custom_id: "", full_name: "", password: "", role: "Student", department: "", phone: "", class: "" });
     setIsEditMode(false);
     setShowModal(true);
   };
@@ -309,28 +323,28 @@ const AdminDashboard = () => {
           return idx >= 0 ? CLASS_COLORS[idx % CLASS_COLORS.length] : { bg: "#f3f4f6", text: "#6b7280" };
         };
 
+        // Batch color map for filter tabs
         const BATCH_COLORS = {
-          'A1': { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
-          'B1': { bg: "#dcfce7", text: "#166534", border: "#86efac" },
-          'C1': { bg: "#f3e8ff", text: "#6b21a8", border: "#c084fc" },
-          'A2': { bg: "#bfdbfe", text: "#1e3a8a", border: "#60a5fa" },
-          'B2': { bg: "#bbf7d0", text: "#14532d", border: "#4ade80" },
-          'C2': { bg: "#e9d5ff", text: "#581c87", border: "#a855f7" },
+          'A1': { bg: '#dbeafe', text: '#1e40af' },
+          'B1': { bg: '#dcfce7', text: '#166534' },
+          'C1': { bg: '#fef3c7', text: '#92400e' },
+          'A2': { bg: '#ede9fe', text: '#5b21b6' },
+          'B2': { bg: '#fee2e2', text: '#991b1b' },
+          'C2': { bg: '#ffedd5', text: '#c2410c' }
         };
-        const getBatchColor = (b) => BATCH_COLORS[b] || { bg: "#f3f4f6", text: "#6b7280", border: "#d1d5db" };
+        const ALL_BATCHES = ['A1', 'B1', 'C1', 'A2', 'B2', 'C2'];
 
         // Apply search + role + class + batch filter
         const filtered = users.filter((u) => {
           const matchRole = filterRole === "All" || u.role === filterRole;
           const matchClass = filterClass === "All" || u.class === filterClass;
-          const matchBatch = filterBatch === "All" || u.batch === filterBatch;
+          const matchBatch = filterBatch === "All" || (u.batch || assignBatch(u.custom_id)) === filterBatch;
           const q = searchQuery.toLowerCase();
           const matchSearch =
             !q ||
             (u.full_name || "").toLowerCase().includes(q) ||
             (u.custom_id || "").toLowerCase().includes(q) ||
-            (u.department || "").toLowerCase().includes(q) ||
-            (u.email || "").toLowerCase().includes(q);
+            (u.department || "").toLowerCase().includes(q);
           return matchRole && matchSearch && matchClass && matchBatch;
         }).sort((a, b) => (a.custom_id || "").localeCompare(b.custom_id || ""));
 
@@ -355,60 +369,62 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 {userList.length === 0 ? (
-                  <tr><td colSpan="6" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
+                  <tr><td colSpan="7" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
                 ) : (
-                  userList.map((user) => {
-                    const userBatch = user.batch || null;
-                    const batchStyle = getBatchColor(userBatch);
-                    return (
-                      <tr key={user.custom_id}>
-                        <td><strong>{user.custom_id}</strong></td>
-                        <td>{user.full_name}</td>
-                        <td>{user.department || "—"}</td>
-                        <td>
-                          {user.role === "Student" && user.class
-                            ? (() => {
-                                const { bg, text } = getClassColor(user.class);
-                                return (
-                                  <span style={{
-                                    background: bg,
-                                    color: text,
-                                    borderRadius: "6px",
-                                    padding: "3px 10px",
-                                    fontSize: "12px",
-                                    fontWeight: 700,
-                                    border: `1px solid ${text}33`,
-                                    whiteSpace: "nowrap"
-                                  }}>
-                                    {user.class}
-                                  </span>
-                                );
-                              })()
-                            : <span style={{ color: "#9ca3af" }}>—</span>
-                          }
-                        </td>
-                        <td>
-                          {userBatch
-                            ? <span style={{
-                                background: batchStyle.bg,
-                                color: batchStyle.text,
-                                borderRadius: "6px",
-                                padding: "3px 10px",
-                                fontSize: "12px",
-                                fontWeight: 700,
-                                border: `1px solid ${batchStyle.border}`,
-                                whiteSpace: "nowrap"
-                              }}>{userBatch}</span>
-                            : <span style={{ color: "#9ca3af" }}>—</span>
-                          }
-                        </td>
-                        <td>
-                          <button className="edit-btn" onClick={() => handleEdit(user)}>Edit</button>
-                          <button className="delete-btn" onClick={() => handleDelete(user.custom_id)}>Delete</button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                  userList.map((user) => (
+                    <tr key={user.custom_id}>
+                      <td><strong>{user.custom_id}</strong></td>
+                      <td>{user.full_name}</td>
+                      <td>{user.department || "—"}</td>
+                      <td>
+                        {user.role === "Student" && user.class
+                          ? (() => {
+                              const { bg, text } = getClassColor(user.class);
+                              return (
+                                <span style={{
+                                  background: bg,
+                                  color: text,
+                                  borderRadius: "6px",
+                                  padding: "3px 10px",
+                                  fontSize: "12px",
+                                  fontWeight: 700,
+                                  border: `1px solid ${text}33`,
+                                  whiteSpace: "nowrap"
+                                }}>
+                                  {user.class}
+                                </span>
+                              );
+                            })()
+                          : <span style={{ color: "#9ca3af" }}>—</span>
+                        }
+                      </td>
+                      <td>
+                        {(() => {
+                          const batch = user.batch || (user.role === "Student" ? assignBatch(user.custom_id) : null);
+                          if (!batch) return <span style={{ color: '#9ca3af' }}>—</span>;
+                          const { bg, text } = BATCH_COLORS[batch] || { bg: '#f3f4f6', text: '#6b7280' };
+                          return (
+                            <span style={{
+                              background: bg,
+                              color: text,
+                              borderRadius: '6px',
+                              padding: '3px 10px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              border: `1px solid ${text}33`,
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {batch}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td>
+                        <button className="edit-btn" onClick={() => handleEdit(user)}>Edit</button>
+                        <button className="delete-btn" onClick={() => handleDelete(user.custom_id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -511,6 +527,54 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Batch Filter Tabs — only visible when Students tab is active */}
+            {(filterRole === "Student" || filterRole === "All") && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", margin: "8px 0 16px" }}>
+                <button
+                  onClick={() => setFilterBatch("All")}
+                  style={{
+                    padding: "4px 14px", borderRadius: "20px", border: "1.5px solid #e5e7eb",
+                    background: filterBatch === "All" ? "#374151" : "white",
+                    color: filterBatch === "All" ? "white" : "#374151",
+                    fontWeight: 600, fontSize: "12px", cursor: "pointer", transition: "all 0.15s"
+                  }}
+                >
+                  All Batches
+                </button>
+                {ALL_BATCHES.map(batch => {
+                  const { bg, text } = BATCH_COLORS[batch];
+                  const isActive = filterBatch === batch;
+                  const count = users.filter(u => {
+                    if (u.role !== "Student") return false;
+                    if (filterRole !== "All" && u.role !== filterRole) return false;
+                    if (filterClass !== "All" && u.class !== filterClass) return false;
+                    return (u.batch || assignBatch(u.custom_id)) === batch;
+                  }).length;
+                  if (count === 0) return null;
+                  return (
+                    <button
+                      key={batch}
+                      onClick={() => setFilterBatch(batch)}
+                      style={{
+                        padding: "4px 14px", borderRadius: "20px", cursor: "pointer",
+                        border: `1.5px solid ${isActive ? text : "#e5e7eb"}`,
+                        background: isActive ? bg : "white",
+                        color: isActive ? text : "#374151",
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: "12px",
+                        transition: "all 0.15s"
+                      }}
+                    >
+                      {batch}
+                      <span style={{ marginLeft: "6px", background: isActive ? text : "#e5e7eb", color: isActive ? bg : "#374151", borderRadius: "10px", padding: "1px 6px", fontSize: "11px", fontWeight: 700 }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* User Tables - Grouped by Role */}
             {filterRole === "All" ? (
               groupedRoles.map((role) => {
@@ -572,7 +636,6 @@ const AdminDashboard = () => {
                   <label>Full Name</label>
                   <input name="full_name" value={formData.full_name} onChange={handleChange} required />
                 </div>
-
                 <div className="form-group">
                   <label>Password</label>
                   <input name="password" value={formData.password} onChange={handleChange} required />
@@ -593,9 +656,9 @@ const AdminDashboard = () => {
                       <label>Department</label>
                       {(() => {
                         const parsed = parseStudentId(formData.custom_id);
-                        if (!parsed.hasInput) return <div style={{ padding: "10px 14px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px", color: "#9ca3af", fontSize: "14px" }}>Auto-filled from ID</div>;
-                        if (parsed.reason === 'format' || parsed.reason === 'branch') return <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "14px" }}>⚠️ Invalid ID format</div>;
-                        return <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", fontWeight: 600, color: "#166534", fontSize: "14px" }}>🏛️ {parsed.department}</div>;
+                        if (!parsed.hasInput) return <div style={{ padding: "12px 14px", background: "#f9fafb", border: "1px solid #cbd5e1", borderRadius: "8px", color: "#64748b", fontSize: "14px" }}>Auto-filled from ID</div>;
+                        if (parsed.reason === 'format' || parsed.reason === 'branch') return <div style={{ padding: "12px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "14px" }}>⚠️ Invalid ID format</div>;
+                        return <div style={{ padding: "12px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", fontWeight: 600, color: "#166534", fontSize: "15px", display: "flex", alignItems: "center", gap: "8px" }}><span>🏛️</span> {parsed.department}</div>;
                       })()}
                     </div>
                     <div className="form-group">
@@ -603,29 +666,29 @@ const AdminDashboard = () => {
                       {(() => {
                         const parsed = parseStudentId(formData.custom_id);
                         if (parsed.valid) {
-                          return <div style={{ padding: "10px 14px", background: "#eff6ff", border: "1.5px solid #93c5fd", borderRadius: "8px", fontWeight: 700, color: "#1d4ed8", fontSize: "15px" }}>✅ {parsed.class}</div>;
+                          return <div style={{ padding: "12px 14px", background: "#eff6ff", border: "1px solid #93c5fd", borderRadius: "8px", fontWeight: 700, color: "#1d4ed8", fontSize: "15px", display: "flex", alignItems: "center", gap: "8px" }}><span>✅</span> {parsed.class}</div>;
                         }
                         
                         return (
                           <>
-                            <div style={{ padding: "10px 12px", background: "#ffffff", border: "1px solid #d1d5db", borderRadius: "8px", minHeight: "60px", color: "#9ca3af", fontSize: "14px", lineHeight: "1.5", marginBottom: parsed.reason !== 'empty' && parsed.reason !== 'branch' && parsed.reason !== 'format' ? '12px' : '0' }}>
+                            <div style={{ padding: "12px 14px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "8px", minHeight: "60px", color: "#64748b", fontSize: "14px", lineHeight: "1.5", marginBottom: parsed.reason !== 'empty' && parsed.reason !== 'branch' && parsed.reason !== 'format' ? '12px' : '0' }}>
                               Enter a valid Student ID above (e.g. 24DCE001)<br/>to auto-preview...
                             </div>
                             
                             {parsed.reason === 'future_batch' && (
-                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "12px", display: "flex", gap: "6px" }}>
+                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "13px", display: "flex", gap: "8px", alignItems: "center" }}>
                                 <span>⚠️</span>
                                 <span>Cannot register 20{parsed.adminYear} batch students before June. Admissions open in June.</span>
                               </div>
                             )}
                             {parsed.reason === 'year' && (
-                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "12px", display: "flex", gap: "6px" }}>
+                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "13px", display: "flex", gap: "8px", alignItems: "center" }}>
                                 <span>⚠️</span>
                                 <span>Invalid Admission Year (Too old or invalid)</span>
                               </div>
                             )}
                             {parsed.reason === 'roll' && (
-                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "12px", display: "flex", gap: "6px" }}>
+                              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", fontWeight: 600, color: "#991b1b", fontSize: "13px", display: "flex", gap: "8px", alignItems: "center" }}>
                                 <span>⚠️</span>
                                 <span>Invalid Roll (001-150)</span>
                               </div>

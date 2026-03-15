@@ -50,7 +50,9 @@ const assignSection = (enrollmentId) => {
   return null; // out of range
 };
 
-// ─── BATCH ASSIGNMENT (roll-number based) ───────────────────────────────────
+// ─── AUTO-BATCH ALLOCATION ─────────────────────────────────────────────────
+// Roll 001-025 → A1, 026-050 → B1, 051-075 → C1
+// Roll 076-100 → A2, 101-125 → B2, 126-150 → C2
 const assignBatch = (enrollmentId) => {
   if (!enrollmentId) return null;
   const id = enrollmentId.toUpperCase().trim();
@@ -65,26 +67,6 @@ const assignBatch = (enrollmentId) => {
   if (roll >= 126 && roll <= 150) return 'C2';
   return null;
 };
-
-// GET /api/available-classes - Fetch all unique classes
-router.get('/available-classes', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('class')
-      .eq('role', 'Student')
-      .not('class', 'is', null);
-
-    if (error) throw error;
-    
-    // Extract unique existing classes and sort them
-    const uniqueClasses = [...new Set(data.map(d => d.class))].sort();
-    res.json(uniqueClasses);
-  } catch (err) {
-    console.error('Error fetching classes:', err);
-    res.status(500).json({ success: false, message: 'Error fetching classes' });
-  }
-});
 
 // GET /api/users - Fetch all users
 router.get('/users', async (req, res) => {
@@ -128,18 +110,24 @@ router.post('/users', async (req, res) => {
     const className = role === 'Student' ? assignSection(custom_id) : null;
     const batchName = role === 'Student' ? assignBatch(custom_id) : null;
 
+    // Auto-generate email from custom_id if not provided (DB requires NOT NULL UNIQUE)
+    const userEmail = email || `${custom_id.toLowerCase()}@campus.edu`;
+
+    const insertData = {
+      custom_id,
+      full_name,
+      email: userEmail,
+      password: hashedPassword,
+      role,
+      department,
+      phone,
+      class: className,
+      batch: batchName
+    };
+
     const { data, error } = await supabase
       .from('users')
-      .insert([{
-        custom_id,
-        full_name,
-        password: hashedPassword,
-        role,
-        department,
-        phone,
-        class: className,
-        batch: batchName
-      }])
+      .insert([insertData])
       .select();
 
     if (error) {
@@ -164,7 +152,8 @@ router.put('/users/:id', async (req, res) => {
     // Re-compute class and batch from the enrollment ID
     const className = role === 'Student' ? assignSection(id) : null;
     const batchName = role === 'Student' ? assignBatch(id) : null;
-    const updateData = { full_name, email, role, department, phone, class: className, batch: batchName };
+    const updateData = { full_name, role, department, phone, class: className, batch: batchName };
+    if (email) updateData.email = email;
 
     // Only hash and update password if provided
     if (password) {
