@@ -87,7 +87,7 @@ router.get('/users', async (req, res) => {
 // POST /api/users - Create new user
 router.post('/users', async (req, res) => {
   try {
-    const { custom_id, full_name, email, password, role, department, phone } = req.body;
+    const { custom_id, full_name, password, role, department, phone } = req.body;
 
     // Guard: Block current-year student registration before June
     if (role === 'Student') {

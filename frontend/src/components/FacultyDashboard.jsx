@@ -12,8 +12,8 @@ const FacultyDashboard = () => {
   // Assignments (old/legacy)
   const [assignments, setAssignments] = useState([]);
 
-  // Classroom states
   const [classrooms, setClassrooms] = useState([]);
+  const [availableClasses, setAvailableClasses] = useState([]);
   const [activeClassroom, setActiveClassroom] = useState(null);
   const [classroomTab, setClassroomTab] = useState("stream"); // stream | classwork | people
   const [posts, setPosts] = useState([]);
@@ -32,6 +32,8 @@ const FacultyDashboard = () => {
   const [classForm, setClassForm] = useState({ name: "", subject: "", section: "", room: "" });
   const [postForm, setPostForm] = useState({ title: "", description: "", points: "", due_date: "" });
   const [gradeForm, setGradeForm] = useState({ grade: "", feedback: "" });
+  const [enrollForm, setEnrollForm] = useState({ className: "", batch: "All" });
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     const name = localStorage.getItem("userName");
@@ -46,6 +48,12 @@ const FacultyDashboard = () => {
       const res = await fetch("http://localhost:5000/api/assignments");
       setAssignments(await res.json());
     } catch (e) {}
+
+    try {
+      const res = await fetch("http://localhost:5000/api/available-classes");
+      setAvailableClasses(await res.json());
+    } catch (e) {}
+
     if (id) fetchClassrooms(id);
   };
 
@@ -119,6 +127,29 @@ const FacultyDashboard = () => {
     } catch (e) {
       alert("Error removing student.");
     }
+  };
+
+  // --- AUTO ENROLL STUDENTS ---
+  const handleAutoEnroll = async (e) => {
+    e.preventDefault();
+    if (!enrollForm.className) return alert("Please enter a class name");
+    setEnrolling(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/classrooms/${activeClassroom.id}/auto-enroll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ class_name: enrollForm.className, batch: enrollForm.batch })
+      });
+      const data = await res.json();
+      alert(data.message);
+      if (data.success) {
+        fetchPeople(activeClassroom.id);
+        setEnrollForm({ className: "", batch: "All" });
+      }
+    } catch (err) {
+      alert("Error auto-enrolling students");
+    }
+    setEnrolling(false);
   };
 
   // --- POST (Announcement / Assignment / Material) ---
@@ -408,27 +439,91 @@ const FacultyDashboard = () => {
                       </div>
                     </div>
                   </div>
+
+                  <div className="cls-people-section" style={{ background: "#f8fafc", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "30px" }}>
+                    <h4 style={{ marginTop: 0, marginBottom: "15px", display: "flex", alignItems: "center", gap: "8px" }}>
+                      ⚡ Auto-Enroll Students
+                    </h4>
+                    <form onSubmit={handleAutoEnroll} style={{ display: "flex", gap: "10px", alignItems: "flex-end", flexWrap: "wrap" }}>
+                      <div className="cls-form-group" style={{ margin: 0, flex: 1, minWidth: "150px" }}>
+                        <label style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Target Class</label>
+                        <select 
+                          value={enrollForm.className} 
+                          onChange={e => setEnrollForm({ className: e.target.value, batch: "All" })} 
+                          required 
+                          style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", width: "100%" }}
+                        >
+                          <option value="" disabled>Select Class</option>
+                          {availableClasses.map(cls => (
+                            <option key={cls} value={cls}>{cls}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="cls-form-group" style={{ margin: 0, width: "120px" }}>
+                        <label style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Batch</label>
+                        <select 
+                          value={enrollForm.batch} 
+                          onChange={e => setEnrollForm({ ...enrollForm, batch: e.target.value })} 
+                          style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", width: "100%" }}
+                        >
+                          <option value="All">All Batches</option>
+                          {(!enrollForm.className || enrollForm.className.endsWith('1')) && (
+                            <>
+                              <option value="A1">A1</option>
+                              <option value="B1">B1</option>
+                              <option value="C1">C1</option>
+                            </>
+                          )}
+                          {(!enrollForm.className || !enrollForm.className.endsWith('1')) && (
+                            <>
+                              <option value="A2">A2</option>
+                              <option value="B2">B2</option>
+                              <option value="C2">C2</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+                      <button 
+                        type="submit" 
+                        disabled={enrolling} 
+                        style={{ padding: "8px 16px", background: activeClassroom.banner_color, color: "white", border: "none", borderRadius: "6px", fontWeight: 600, cursor: enrolling ? "not-allowed" : "pointer", height: "35px" }}
+                      >
+                        {enrolling ? "Adding..." : "+ Add Students"}
+                      </button>
+                    </form>
+                  </div>
+
                   <div className="cls-people-section">
                     <h4>Students <span className="cls-people-count">{people.length}</span></h4>
                     {people.length === 0 ? (
                       <div className="cls-empty">No students enrolled yet. Share the class code: <strong>{activeClassroom.class_code}</strong></div>
                     ) : (
-                      people.map(p => (
-                        <div key={p.id} className="cls-person-row">
-                          <div className="cls-p-avatar">{p.student_name[0]}</div>
-                          <div style={{ flex: 1 }}>
-                            <strong>{p.student_name}</strong>
-                            <span className="cls-p-id">{p.student_id}</span>
+                      <div className="cls-people-list">
+                        {people.map(p => (
+                          <div key={p.id} className="cls-person-row">
+                            <div className="cls-p-avatar">{p.student_name[0]}</div>
+                            <div className="cls-p-col cls-p-name-col">
+                              <strong>{p.student_name}</strong>
+                              <span className="cls-p-id">{p.student_id}</span>
+                            </div>
+                            <div className="cls-p-col cls-p-class-col">
+                              <span className="cls-p-class">Class: {p.class_name}</span>
+                            </div>
+                            <div className="cls-p-col cls-p-batch-col">
+                              <span className="cls-p-batch">Batch: {p.batch}</span>
+                            </div>
+                            <div className="cls-p-col cls-p-action-col">
+                              <button
+                                className="cls-remove-student-btn"
+                                title="Remove student from classroom"
+                                onClick={() => handleRemoveStudent(p.student_id, p.student_name)}
+                              >
+                                🗑️ Remove
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            className="cls-remove-student-btn"
-                            title="Remove student from classroom"
-                            onClick={() => handleRemoveStudent(p.student_id, p.student_name)}
-                          >
-                            🗑️ Remove
-                          </button>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

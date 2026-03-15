@@ -3,6 +3,22 @@ import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 
 
+// ─── BATCH ASSIGNMENT (roll-number based) ──────────────────────────────────
+const assignBatch = (enrollmentId) => {
+  if (!enrollmentId) return null;
+  const id = enrollmentId.toUpperCase().trim();
+  const match = id.match(/^(\d{2})[A-Z]?([A-Z]{2})(\d{3,})$/);
+  if (!match) return null;
+  const roll = parseInt(match[3], 10);
+  if (roll >= 1 && roll <= 25) return 'A1';
+  if (roll >= 26 && roll <= 50) return 'B1';
+  if (roll >= 51 && roll <= 75) return 'C1';
+  if (roll >= 76 && roll <= 100) return 'A2';
+  if (roll >= 101 && roll <= 125) return 'B2';
+  if (roll >= 126 && roll <= 150) return 'C2';
+  return null;
+};
+
 // ─── AUTO-SECTION PREVIEW (mirrors backend logic) ─────────────────────────
 const parseStudentId = (enrollmentId) => {
   if (!enrollmentId) return { valid: false, hasInput: false, reason: 'empty' };
@@ -47,7 +63,9 @@ const parseStudentId = (enrollmentId) => {
   else if (roll >= 75 && roll <= 150) section = `${semester}${branch}2`;
   else return { valid: false, hasInput: true, department: deptMap[branch], reason: 'roll' };
 
-  return { valid: true, hasInput: true, department: deptMap[branch], class: section };
+  const batch = assignBatch(enrollmentId);
+
+  return { valid: true, hasInput: true, department: deptMap[branch], class: section, batch };
 };
 
 // Thin wrappers so the existing call-sites on lines 80-81 work correctly
@@ -272,6 +290,23 @@ const AdminDashboard = () => {
           users.filter(u => u.role === "Student" && u.class).map(u => u.class)
         )].sort();
 
+        // All unique batch values for the current view, sorted by specific sequence
+        const batchOrder = ['A1', 'B1', 'C1', 'A2', 'B2', 'C2'];
+        const allBatches = [...new Set(
+          users.filter(u => 
+            u.role === "Student" && 
+            u.batch && 
+            (filterClass === "All" || u.class === filterClass)
+          ).map(u => u.batch)
+        )].sort((a, b) => {
+          const indexA = batchOrder.indexOf(a);
+          const indexB = batchOrder.indexOf(b);
+          if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+          if (indexA === -1) return 1;
+          if (indexB === -1) return -1;
+          return indexA - indexB;
+        });
+
         // Color palette for each class — cycles through colors
         const CLASS_COLORS = [
           { bg: "#dbeafe", text: "#1d4ed8" }, // blue
@@ -436,45 +471,59 @@ const AdminDashboard = () => {
               })}
             </div>
 
-            {/* Class Filter Tabs — only visible when Students tab is active */}
+            {/* Class + Batch Filters — only for Students */}
             {(filterRole === "Student" || filterRole === "All") && allClasses.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", margin: "12px 0 4px" }}>
-                <button
-                  onClick={() => setFilterClass("All")}
-                  style={{
-                    padding: "4px 14px", borderRadius: "20px", border: "1.5px solid #e5e7eb",
-                    background: filterClass === "All" ? "#1a73e8" : "white",
-                    color: filterClass === "All" ? "white" : "#374151",
-                    fontWeight: 600, fontSize: "12px", cursor: "pointer"
-                  }}
-                >
-                  All Classes
-                </button>
-                {allClasses.map(cls => {
-                  const { bg, text } = getClassColor(cls);
-                  const isActive = filterClass === cls;
-                  const count = users.filter(u => u.class === cls).length;
-                  return (
+              <div className="sub-filters-container">
+                {/* Class Filters */}
+                <div className="sub-filter-section">
+                  <span className="sub-filter-label">🏫 Class</span>
+                  <div className="sub-filter-pills">
                     <button
-                      key={cls}
-                      onClick={() => setFilterClass(cls)}
-                      style={{
-                        padding: "4px 14px", borderRadius: "20px", cursor: "pointer",
-                        border: `1.5px solid ${isActive ? text : "#e5e7eb"}`,
-                        background: isActive ? bg : "white",
-                        color: isActive ? text : "#374151",
-                        fontWeight: isActive ? 700 : 500,
-                        fontSize: "12px",
-                        transition: "all 0.15s"
-                      }}
-                    >
-                      {cls}
-                      <span style={{ marginLeft: "6px", background: isActive ? text : "#e5e7eb", color: isActive ? bg : "#374151", borderRadius: "10px", padding: "1px 6px", fontSize: "11px", fontWeight: 700 }}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                      className={`filter-pill ${filterClass === "All" ? "active" : ""}`}
+                      onClick={() => { setFilterClass("All"); setFilterBatch("All"); }}
+                    >All</button>
+                    {allClasses.map(cls => {
+                      const count = users.filter(u => u.class === cls).length;
+                      return (
+                        <button
+                          key={cls}
+                          className={`filter-pill ${filterClass === cls ? "active" : ""}`}
+                          onClick={() => { setFilterClass(cls); setFilterBatch("All"); }}
+                        >
+                          {cls}
+                          <span className="filter-pill-count">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Batch Filters */}
+                <div className="sub-filter-section">
+                  <span className="sub-filter-label">🏷️ Batch</span>
+                  <div className="sub-filter-pills">
+                    <button
+                      className={`filter-pill ${filterBatch === "All" ? "active" : ""}`}
+                      onClick={() => setFilterBatch("All")}
+                    >All</button>
+                    {allBatches.map(b => {
+                      const { bg, text: textColor, border } = getBatchColor(b);
+                      const isActive = filterBatch === b;
+                      const count = users.filter(u => u.batch === b && (filterClass === "All" || u.class === filterClass)).length;
+                      return (
+                        <button
+                          key={b}
+                          className={`filter-pill ${isActive ? "active" : ""}`}
+                          style={isActive ? { background: bg, color: textColor, borderColor: border } : {}}
+                          onClick={() => setFilterBatch(b)}
+                        >
+                          {b}
+                          <span className="filter-pill-count" style={isActive ? { background: textColor, color: bg } : {}}>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -654,6 +703,20 @@ const AdminDashboard = () => {
                     <label>Department</label>
                     <input name="department" value={formData.department} onChange={handleChange} placeholder="e.g. Administration" />
                   </div>
+                )}
+
+                {/* Extra fields shown only in Edit mode */}
+                {isEditMode && (
+                  <>
+                    <div className="form-group">
+                      <label>Email</label>
+                      <input name="email" type="email" value={formData.email || ""} onChange={handleChange} placeholder="user@example.com" />
+                    </div>
+                    <div className="form-group">
+                      <label>Phone</label>
+                      <input name="phone" type="tel" value={formData.phone || ""} onChange={handleChange} placeholder="e.g. 9876543210" />
+                    </div>
+                  </>
                 )}
 
                 <div className="modal-actions">
