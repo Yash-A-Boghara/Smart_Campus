@@ -50,13 +50,34 @@ router.get('/classrooms/student/:student_id', async (req, res) => {
 // GET /api/classrooms/:id/people  — enrolled students
 router.get('/classrooms/:id/people', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data: enrollments, error } = await supabase
       .from('classroom_enrollments')
       .select('*')
       .eq('classroom_id', req.params.id)
-      .order('joined_at', { ascending: true });
+      .order('student_id', { ascending: true }); // Ascending order by ID per user request
+      
     if (error) throw error;
-    res.json(data || []);
+    if (!enrollments || enrollments.length === 0) return res.json([]);
+
+    // Fetch class and batch from users table
+    const studentIds = enrollments.map(e => e.student_id);
+    const { data: usersData, error: uErr } = await supabase
+      .from('users')
+      .select('custom_id, class, batch')
+      .in('custom_id', studentIds);
+      
+    if (uErr) throw uErr;
+
+    const userMap = {};
+    usersData.forEach(u => userMap[u.custom_id] = u);
+
+    const enriched = enrollments.map(e => ({
+      ...e,
+      class_name: userMap[e.student_id]?.class || '-',
+      batch: userMap[e.student_id]?.batch || '-'
+    }));
+
+    res.json(enriched);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -134,6 +155,69 @@ router.delete('/classrooms/:classroomId/students/:studentId', async (req, res) =
       .eq('student_id', studentId);
     if (error) throw error;
     res.json({ success: true, message: 'Student removed from classroom' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/classrooms/:id/auto-enroll  — Auto-enroll students by class/batch
+router.post('/classrooms/:id/auto-enroll', async (req, res) => {
+  try {
+    const classroom_id = req.params.id;
+    const { class_name, batch } = req.body;
+
+    if (!class_name) {
+      return res.json({ success: false, message: 'Class name is required' });
+    }
+
+    // 1. Fetch matching students from users table
+    let query = supabase
+      .from('users')
+      .select('custom_id, full_name')
+      .eq('role', 'Student')
+      .eq('class', class_name);
+    
+    if (batch && batch !== 'All') {
+      query = query.eq('batch', batch);
+    }
+
+    const { data: students, error: studentErr } = await query;
+    if (studentErr) throw studentErr;
+
+    if (!students || students.length === 0) {
+      return res.json({ success: false, message: 'No students found matching this criteria' });
+    }
+
+    // 2. Fetch existing enrollments for this classroom
+    const { data: existingRecords, error: extErr } = await supabase
+      .from('classroom_enrollments')
+      .select('student_id')
+      .eq('classroom_id', classroom_id);
+    if (extErr) throw extErr;
+
+    const existingStudentIds = existingRecords.map(r => r.student_id);
+
+    // 3. Filter out students already enrolled
+    const newStudents = students.filter(s => !existingStudentIds.includes(s.custom_id));
+
+    if (newStudents.length === 0) {
+      return res.json({ success: true, message: 'All matching students are already enrolled in this class' });
+    }
+
+    // 4. Insert new students
+    const enrollments = newStudents.map(s => ({
+      classroom_id,
+      student_id: s.custom_id,
+      student_name: s.full_name
+    }));
+
+    const { error: insertErr } = await supabase
+      .from('classroom_enrollments')
+      .insert(enrollments);
+    
+    if (insertErr) throw insertErr;
+
+    res.json({ success: true, message: `Successfully enrolled ${newStudents.length} student(s)` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

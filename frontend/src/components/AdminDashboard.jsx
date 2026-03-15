@@ -3,6 +3,22 @@ import { useNavigate } from "react-router-dom";
 import "./AdminDashboard.css";
 
 
+// ─── BATCH ASSIGNMENT (roll-number based) ──────────────────────────────────
+const assignBatch = (enrollmentId) => {
+  if (!enrollmentId) return null;
+  const id = enrollmentId.toUpperCase().trim();
+  const match = id.match(/^(\d{2})[A-Z]?([A-Z]{2})(\d{3,})$/);
+  if (!match) return null;
+  const roll = parseInt(match[3], 10);
+  if (roll >= 1 && roll <= 25) return 'A1';
+  if (roll >= 26 && roll <= 50) return 'B1';
+  if (roll >= 51 && roll <= 75) return 'C1';
+  if (roll >= 76 && roll <= 100) return 'A2';
+  if (roll >= 101 && roll <= 125) return 'B2';
+  if (roll >= 126 && roll <= 150) return 'C2';
+  return null;
+};
+
 // ─── AUTO-SECTION PREVIEW (mirrors backend logic) ─────────────────────────
 const parseStudentId = (enrollmentId) => {
   if (!enrollmentId) return { valid: false, hasInput: false, reason: 'empty' };
@@ -47,7 +63,9 @@ const parseStudentId = (enrollmentId) => {
   else if (roll >= 75 && roll <= 150) section = `${semester}${branch}2`;
   else return { valid: false, hasInput: true, department: deptMap[branch], reason: 'roll' };
 
-  return { valid: true, hasInput: true, department: deptMap[branch], class: section };
+  const batch = assignBatch(enrollmentId);
+
+  return { valid: true, hasInput: true, department: deptMap[branch], class: section, batch };
 };
 
 // Thin wrappers so the existing call-sites on lines 80-81 work correctly
@@ -66,6 +84,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [filterRole, setFilterRole] = useState("All");
   const [filterClass, setFilterClass] = useState("All");
+  const [filterBatch, setFilterBatch] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   
   // Modal States
@@ -257,6 +276,23 @@ const AdminDashboard = () => {
           users.filter(u => u.role === "Student" && u.class).map(u => u.class)
         )].sort();
 
+        // All unique batch values for the current view, sorted by specific sequence
+        const batchOrder = ['A1', 'B1', 'C1', 'A2', 'B2', 'C2'];
+        const allBatches = [...new Set(
+          users.filter(u => 
+            u.role === "Student" && 
+            u.batch && 
+            (filterClass === "All" || u.class === filterClass)
+          ).map(u => u.batch)
+        )].sort((a, b) => {
+          const indexA = batchOrder.indexOf(a);
+          const indexB = batchOrder.indexOf(b);
+          if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+          if (indexA === -1) return 1;
+          if (indexB === -1) return -1;
+          return indexA - indexB;
+        });
+
         // Color palette for each class — cycles through colors
         const CLASS_COLORS = [
           { bg: "#dbeafe", text: "#1d4ed8" }, // blue
@@ -273,10 +309,21 @@ const AdminDashboard = () => {
           return idx >= 0 ? CLASS_COLORS[idx % CLASS_COLORS.length] : { bg: "#f3f4f6", text: "#6b7280" };
         };
 
-        // Apply search + role + class filter
+        const BATCH_COLORS = {
+          'A1': { bg: "#dbeafe", text: "#1e40af", border: "#93c5fd" },
+          'B1': { bg: "#dcfce7", text: "#166534", border: "#86efac" },
+          'C1': { bg: "#f3e8ff", text: "#6b21a8", border: "#c084fc" },
+          'A2': { bg: "#bfdbfe", text: "#1e3a8a", border: "#60a5fa" },
+          'B2': { bg: "#bbf7d0", text: "#14532d", border: "#4ade80" },
+          'C2': { bg: "#e9d5ff", text: "#581c87", border: "#a855f7" },
+        };
+        const getBatchColor = (b) => BATCH_COLORS[b] || { bg: "#f3f4f6", text: "#6b7280", border: "#d1d5db" };
+
+        // Apply search + role + class + batch filter
         const filtered = users.filter((u) => {
           const matchRole = filterRole === "All" || u.role === filterRole;
           const matchClass = filterClass === "All" || u.class === filterClass;
+          const matchBatch = filterBatch === "All" || u.batch === filterBatch;
           const q = searchQuery.toLowerCase();
           const matchSearch =
             !q ||
@@ -284,7 +331,7 @@ const AdminDashboard = () => {
             (u.custom_id || "").toLowerCase().includes(q) ||
             (u.department || "").toLowerCase().includes(q) ||
             (u.email || "").toLowerCase().includes(q);
-          return matchRole && matchSearch && matchClass;
+          return matchRole && matchSearch && matchClass && matchBatch;
         }).sort((a, b) => (a.custom_id || "").localeCompare(b.custom_id || ""));
 
 
@@ -300,9 +347,9 @@ const AdminDashboard = () => {
                 <tr>
                   <th>ID</th>
                   <th>Full Name</th>
-                  <th>Email</th>
                   <th>Department</th>
                   <th>Class / Section</th>
+                  <th>Batch</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -310,40 +357,58 @@ const AdminDashboard = () => {
                 {userList.length === 0 ? (
                   <tr><td colSpan="6" style={{ textAlign: "center", color: "#999", padding: "1.5rem" }}>No users found</td></tr>
                 ) : (
-                  userList.map((user) => (
-                    <tr key={user.custom_id}>
-                      <td><strong>{user.custom_id}</strong></td>
-                      <td>{user.full_name}</td>
-                      <td style={{ fontSize: "0.85rem", color: "#666" }}>{user.email || "—"}</td>
-                      <td>{user.department || "—"}</td>
-                      <td>
-                        {user.role === "Student" && user.class
-                          ? (() => {
-                              const { bg, text } = getClassColor(user.class);
-                              return (
-                                <span style={{
-                                  background: bg,
-                                  color: text,
-                                  borderRadius: "6px",
-                                  padding: "3px 10px",
-                                  fontSize: "12px",
-                                  fontWeight: 700,
-                                  border: `1px solid ${text}33`,
-                                  whiteSpace: "nowrap"
-                                }}>
-                                  {user.class}
-                                </span>
-                              );
-                            })()
-                          : <span style={{ color: "#9ca3af" }}>—</span>
-                        }
-                      </td>
-                      <td>
-                        <button className="edit-btn" onClick={() => handleEdit(user)}>Edit</button>
-                        <button className="delete-btn" onClick={() => handleDelete(user.custom_id)}>Delete</button>
-                      </td>
-                    </tr>
-                  ))
+                  userList.map((user) => {
+                    const userBatch = user.batch || null;
+                    const batchStyle = getBatchColor(userBatch);
+                    return (
+                      <tr key={user.custom_id}>
+                        <td><strong>{user.custom_id}</strong></td>
+                        <td>{user.full_name}</td>
+                        <td>{user.department || "—"}</td>
+                        <td>
+                          {user.role === "Student" && user.class
+                            ? (() => {
+                                const { bg, text } = getClassColor(user.class);
+                                return (
+                                  <span style={{
+                                    background: bg,
+                                    color: text,
+                                    borderRadius: "6px",
+                                    padding: "3px 10px",
+                                    fontSize: "12px",
+                                    fontWeight: 700,
+                                    border: `1px solid ${text}33`,
+                                    whiteSpace: "nowrap"
+                                  }}>
+                                    {user.class}
+                                  </span>
+                                );
+                              })()
+                            : <span style={{ color: "#9ca3af" }}>—</span>
+                          }
+                        </td>
+                        <td>
+                          {userBatch
+                            ? <span style={{
+                                background: batchStyle.bg,
+                                color: batchStyle.text,
+                                borderRadius: "6px",
+                                padding: "3px 10px",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                border: `1px solid ${batchStyle.border}`,
+                                whiteSpace: "nowrap"
+                              }}>{userBatch}</span>
+                            : <span style={{ color: "#9ca3af" }}>—</span>
+                          }
+                        </td>
+                        <td>
+                          <button className="edit-btn" onClick={() => handleEdit(user)}>Edit</button>
+                          <button className="delete-btn" onClick={() => handleDelete(user.custom_id)}>Delete</button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -380,7 +445,7 @@ const AdminDashboard = () => {
                   <button
                     key={role}
                     className={`role-tab ${filterRole === role ? "active" : ""} role-tab-${role.toLowerCase()}`}
-                    onClick={() => { setFilterRole(role); setFilterClass("All"); }}
+                    onClick={() => { setFilterRole(role); setFilterClass("All"); setFilterBatch("All"); }}
                   >
                     <span>{roleIcons[role]}</span>
                     <span>{role}</span>
@@ -390,45 +455,59 @@ const AdminDashboard = () => {
               })}
             </div>
 
-            {/* Class Filter Tabs — only visible when Students tab is active */}
+            {/* Class + Batch Filters — only for Students */}
             {(filterRole === "Student" || filterRole === "All") && allClasses.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", margin: "12px 0 4px" }}>
-                <button
-                  onClick={() => setFilterClass("All")}
-                  style={{
-                    padding: "4px 14px", borderRadius: "20px", border: "1.5px solid #e5e7eb",
-                    background: filterClass === "All" ? "#1a73e8" : "white",
-                    color: filterClass === "All" ? "white" : "#374151",
-                    fontWeight: 600, fontSize: "12px", cursor: "pointer"
-                  }}
-                >
-                  All Classes
-                </button>
-                {allClasses.map(cls => {
-                  const { bg, text } = getClassColor(cls);
-                  const isActive = filterClass === cls;
-                  const count = users.filter(u => u.class === cls).length;
-                  return (
+              <div className="sub-filters-container">
+                {/* Class Filters */}
+                <div className="sub-filter-section">
+                  <span className="sub-filter-label">🏫 Class</span>
+                  <div className="sub-filter-pills">
                     <button
-                      key={cls}
-                      onClick={() => setFilterClass(cls)}
-                      style={{
-                        padding: "4px 14px", borderRadius: "20px", cursor: "pointer",
-                        border: `1.5px solid ${isActive ? text : "#e5e7eb"}`,
-                        background: isActive ? bg : "white",
-                        color: isActive ? text : "#374151",
-                        fontWeight: isActive ? 700 : 500,
-                        fontSize: "12px",
-                        transition: "all 0.15s"
-                      }}
-                    >
-                      {cls}
-                      <span style={{ marginLeft: "6px", background: isActive ? text : "#e5e7eb", color: isActive ? bg : "#374151", borderRadius: "10px", padding: "1px 6px", fontSize: "11px", fontWeight: 700 }}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                      className={`filter-pill ${filterClass === "All" ? "active" : ""}`}
+                      onClick={() => { setFilterClass("All"); setFilterBatch("All"); }}
+                    >All</button>
+                    {allClasses.map(cls => {
+                      const count = users.filter(u => u.class === cls).length;
+                      return (
+                        <button
+                          key={cls}
+                          className={`filter-pill ${filterClass === cls ? "active" : ""}`}
+                          onClick={() => { setFilterClass(cls); setFilterBatch("All"); }}
+                        >
+                          {cls}
+                          <span className="filter-pill-count">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Batch Filters */}
+                <div className="sub-filter-section">
+                  <span className="sub-filter-label">🏷️ Batch</span>
+                  <div className="sub-filter-pills">
+                    <button
+                      className={`filter-pill ${filterBatch === "All" ? "active" : ""}`}
+                      onClick={() => setFilterBatch("All")}
+                    >All</button>
+                    {allBatches.map(b => {
+                      const { bg, text: textColor, border } = getBatchColor(b);
+                      const isActive = filterBatch === b;
+                      const count = users.filter(u => u.batch === b && (filterClass === "All" || u.class === filterClass)).length;
+                      return (
+                        <button
+                          key={b}
+                          className={`filter-pill ${isActive ? "active" : ""}`}
+                          style={isActive ? { background: bg, color: textColor, borderColor: border } : {}}
+                          onClick={() => setFilterBatch(b)}
+                        >
+                          {b}
+                          <span className="filter-pill-count" style={isActive ? { background: textColor, color: bg } : {}}>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -493,10 +572,7 @@ const AdminDashboard = () => {
                   <label>Full Name</label>
                   <input name="full_name" value={formData.full_name} onChange={handleChange} required />
                 </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input name="email" value={formData.email} onChange={handleChange} required />
-                </div>
+
                 <div className="form-group">
                   <label>Password</label>
                   <input name="password" value={formData.password} onChange={handleChange} required />
@@ -564,6 +640,20 @@ const AdminDashboard = () => {
                     <label>Department</label>
                     <input name="department" value={formData.department} onChange={handleChange} placeholder="e.g. Administration" />
                   </div>
+                )}
+
+                {/* Extra fields shown only in Edit mode */}
+                {isEditMode && (
+                  <>
+                    <div className="form-group">
+                      <label>Email</label>
+                      <input name="email" type="email" value={formData.email || ""} onChange={handleChange} placeholder="user@example.com" />
+                    </div>
+                    <div className="form-group">
+                      <label>Phone</label>
+                      <input name="phone" type="tel" value={formData.phone || ""} onChange={handleChange} placeholder="e.g. 9876543210" />
+                    </div>
+                  </>
                 )}
 
                 <div className="modal-actions">

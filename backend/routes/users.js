@@ -50,6 +50,42 @@ const assignSection = (enrollmentId) => {
   return null; // out of range
 };
 
+// ─── BATCH ASSIGNMENT (roll-number based) ───────────────────────────────────
+const assignBatch = (enrollmentId) => {
+  if (!enrollmentId) return null;
+  const id = enrollmentId.toUpperCase().trim();
+  const match = id.match(/^(\d{2})[A-Z]?([A-Z]{2})(\d{3,})$/);
+  if (!match) return null;
+  const roll = parseInt(match[3], 10);
+  if (roll >= 1 && roll <= 25) return 'A1';
+  if (roll >= 26 && roll <= 50) return 'B1';
+  if (roll >= 51 && roll <= 75) return 'C1';
+  if (roll >= 76 && roll <= 100) return 'A2';
+  if (roll >= 101 && roll <= 125) return 'B2';
+  if (roll >= 126 && roll <= 150) return 'C2';
+  return null;
+};
+
+// GET /api/available-classes - Fetch all unique classes
+router.get('/available-classes', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('class')
+      .eq('role', 'Student')
+      .not('class', 'is', null);
+
+    if (error) throw error;
+    
+    // Extract unique existing classes and sort them
+    const uniqueClasses = [...new Set(data.map(d => d.class))].sort();
+    res.json(uniqueClasses);
+  } catch (err) {
+    console.error('Error fetching classes:', err);
+    res.status(500).json({ success: false, message: 'Error fetching classes' });
+  }
+});
+
 // GET /api/users - Fetch all users
 router.get('/users', async (req, res) => {
   try {
@@ -69,7 +105,7 @@ router.get('/users', async (req, res) => {
 // POST /api/users - Create new user
 router.post('/users', async (req, res) => {
   try {
-    const { custom_id, full_name, email, password, role, department, phone } = req.body;
+    const { custom_id, full_name, password, role, department, phone } = req.body;
 
     // Guard: Block current-year student registration before June
     if (role === 'Student') {
@@ -88,26 +124,27 @@ router.post('/users', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Auto-assign class for students based on enrollment ID
+    // Auto-assign class and batch for students based on enrollment ID
     const className = role === 'Student' ? assignSection(custom_id) : null;
+    const batchName = role === 'Student' ? assignBatch(custom_id) : null;
 
     const { data, error } = await supabase
       .from('users')
       .insert([{
         custom_id,
         full_name,
-        email,
         password: hashedPassword,
         role,
         department,
         phone,
-        class: className
+        class: className,
+        batch: batchName
       }])
       .select();
 
     if (error) {
       if (error.code === '23505') { // Unique constraint violation
-        return res.json({ success: false, message: 'User ID or Email already exists' });
+        return res.json({ success: false, message: 'User ID already exists' });
       }
       throw error;
     }
@@ -124,9 +161,10 @@ router.put('/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { full_name, email, password, role, department, phone } = req.body;
-    // Re-compute class from the enrollment ID
+    // Re-compute class and batch from the enrollment ID
     const className = role === 'Student' ? assignSection(id) : null;
-    const updateData = { full_name, email, role, department, phone, class: className };
+    const batchName = role === 'Student' ? assignBatch(id) : null;
+    const updateData = { full_name, email, role, department, phone, class: className, batch: batchName };
 
     // Only hash and update password if provided
     if (password) {
