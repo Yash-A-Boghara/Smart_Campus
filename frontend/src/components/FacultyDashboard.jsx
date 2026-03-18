@@ -18,7 +18,11 @@ const FacultyDashboard = () => {
   const [classroomTab, setClassroomTab] = useState("stream"); // stream | classwork | people
   const [posts, setPosts] = useState([]);
   const [people, setPeople] = useState([]);
+  const [coTeachers, setCoTeachers] = useState([]);
   const [showCreateClass, setShowCreateClass] = useState(false);
+  const [showJoinClass, setShowJoinClass] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joining, setJoining] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
   const [editingPostId, setEditingPostId] = useState(null);
   const [postType, setPostType] = useState("Announcement");
@@ -79,11 +83,19 @@ const FacultyDashboard = () => {
     } catch (e) {}
   };
 
+  const fetchCoTeachers = async (classroomId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/classrooms/${classroomId}/co-teachers`);
+      setCoTeachers(await res.json());
+    } catch (e) {}
+  };
+
   const openClassroom = (cls) => {
     setActiveClassroom(cls);
     setClassroomTab("stream");
     fetchPosts(cls.id);
     fetchPeople(cls.id);
+    fetchCoTeachers(cls.id);
   };
 
   // --- CREATE CLASSROOM ---
@@ -102,12 +114,62 @@ const FacultyDashboard = () => {
     } else alert(data.message);
   };
 
+  // --- JOIN CLASSROOM AS CO-TEACHER ---
+  const handleJoinClass = async (e) => {
+    e.preventDefault();
+    if (!joinCode.trim()) return alert("Please enter a class code");
+    setJoining(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/classrooms/faculty-join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          class_code: joinCode.trim(),
+          faculty_id: facultyId,
+          faculty_name: facultyName,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowJoinClass(false);
+        setJoinCode("");
+        fetchClassrooms(facultyId);
+        alert(data.message);
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      alert("Error joining classroom. Please try again.");
+    }
+    setJoining(false);
+  };
+
   // --- DELETE CLASSROOM ---
   const handleDeleteClass = async (id) => {
     if (!window.confirm("Delete this classroom? All posts and submissions will be lost.")) return;
     await fetch(`http://localhost:5000/api/classrooms/${id}`, { method: "DELETE" });
     if (activeClassroom?.id === id) setActiveClassroom(null);
     fetchClassrooms();
+  };
+
+  // --- LEAVE CLASSROOM (co-teacher leaves) ---
+  const handleLeaveClass = async (cls) => {
+    if (!window.confirm(`Leave "${cls.name}"? You will no longer be a co-teacher.`)) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/classrooms/${cls.id}/co-teachers/${facultyId}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (data.success) {
+        if (activeClassroom?.id === cls.id) setActiveClassroom(null);
+        fetchClassrooms(facultyId);
+      } else {
+        alert("Failed to leave: " + data.message);
+      }
+    } catch (e) {
+      alert("Error leaving classroom.");
+    }
   };
 
   // --- REMOVE STUDENT FROM CLASSROOM ---
@@ -126,6 +188,25 @@ const FacultyDashboard = () => {
       }
     } catch (e) {
       alert("Error removing student.");
+    }
+  };
+
+  // --- REMOVE CO-TEACHER (owner only) ---
+  const handleRemoveCoTeacher = async (coFacultyId, coFacultyName) => {
+    if (!window.confirm(`Remove "${coFacultyName}" as co-teacher?`)) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/classrooms/${activeClassroom.id}/co-teachers/${coFacultyId}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (data.success) {
+        fetchCoTeachers(activeClassroom.id);
+      } else {
+        alert("Failed to remove co-teacher: " + data.message);
+      }
+    } catch (e) {
+      alert("Error removing co-teacher.");
     }
   };
 
@@ -165,7 +246,7 @@ const FacultyDashboard = () => {
         const uRes = await fetch("http://localhost:5000/api/upload", { method: "POST", body: formData });
         const uData = await uRes.json();
         if (uData.success) {
-          attachments = uData.files; // Array of { file_url, file_name, file_type, file_size }
+          attachments = uData.files;
         } else {
           alert("Upload failed: " + uData.message);
           setUploading(false);
@@ -191,7 +272,6 @@ const FacultyDashboard = () => {
 
     let res;
     if (editingPostId) {
-      // For edit, we don't upload new files right now per simplicity, just update text
       res = await fetch(`http://localhost:5000/api/classroom-posts/${editingPostId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -230,7 +310,7 @@ const FacultyDashboard = () => {
       due_date: post.due_date || ""
     });
     setEditingPostId(post.id);
-    setPostFiles([]); // Not supporting editing files right now
+    setPostFiles([]);
     setShowPostModal(true);
   };
 
@@ -260,7 +340,7 @@ const FacultyDashboard = () => {
     if (data.success) {
       setGradeModal(null);
       setGradeForm({ grade: "", feedback: "" });
-      openSubmissions(submissionsModal.post); // Refresh
+      openSubmissions(submissionsModal.post);
     } else alert(data.message);
   };
 
@@ -313,6 +393,7 @@ const FacultyDashboard = () => {
       case "classroom":
         // If inside a classroom
         if (activeClassroom) {
+          const isOwner = !activeClassroom.is_co_teacher;
           return (
             <div className="cls-inner">
               {/* Classroom banner */}
@@ -321,7 +402,14 @@ const FacultyDashboard = () => {
                 <div className="cls-banner-info">
                   <h2>{activeClassroom.name}</h2>
                   <p>{activeClassroom.subject} {activeClassroom.section && `· ${activeClassroom.section}`} {activeClassroom.room && `· ${activeClassroom.room}`}</p>
-                  <span className="cls-code-badge">Class code: <strong>{activeClassroom.class_code}</strong></span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <span className="cls-code-badge">Class code: <strong>{activeClassroom.class_code}</strong></span>
+                    {activeClassroom.is_co_teacher && (
+                      <span style={{ background: "rgba(255,255,255,0.25)", color: "#fff", padding: "3px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600, border: "1px solid rgba(255,255,255,0.5)" }}>
+                        👥 Co-Teacher
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -329,7 +417,7 @@ const FacultyDashboard = () => {
               <div className="cls-subtabs">
                 {["stream", "classwork", "people"].map(t => (
                   <button key={t} className={`cls-subtab ${classroomTab === t ? "active" : ""}`}
-                    onClick={() => { setClassroomTab(t); if (t === "people") fetchPeople(activeClassroom.id); }}>
+                    onClick={() => { setClassroomTab(t); if (t === "people") { fetchPeople(activeClassroom.id); fetchCoTeachers(activeClassroom.id); } }}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </button>
                 ))}
@@ -357,9 +445,9 @@ const FacultyDashboard = () => {
                     posts.map(post => (
                       <div key={post.id} className="cls-feed-card">
                         <div className="cls-feed-header">
-                          <div className="cls-feed-avatar" style={{ background: activeClassroom.banner_color }}>{facultyName[0]}</div>
+                          <div className="cls-feed-avatar" style={{ background: activeClassroom.banner_color }}>{activeClassroom.faculty_name?.[0] || facultyName[0]}</div>
                           <div>
-                            <strong>{facultyName}</strong>
+                            <strong>{activeClassroom.faculty_name || facultyName}</strong>
                             <span className="cls-feed-time">{formatDate(post.created_at)}</span>
                           </div>
                           <span className={`cls-type-badge ${postTypeBadgeClass[post.type]}`}>{postTypeIcon[post.type]} {post.type}</span>
@@ -429,17 +517,46 @@ const FacultyDashboard = () => {
               {/* ---- PEOPLE ---- */}
               {classroomTab === "people" && (
                 <div className="cls-people">
+                  {/* Owner / Teachers section */}
                   <div className="cls-people-section">
-                    <h4>Teacher</h4>
+                    <h4>Teachers</h4>
+                    {/* Owner */}
                     <div className="cls-person-row">
-                      <div className="cls-p-avatar" style={{ background: activeClassroom.banner_color }}>{facultyName[0]}</div>
+                      <div className="cls-p-avatar" style={{ background: activeClassroom.banner_color }}>{activeClassroom.faculty_name?.[0] || facultyName[0]}</div>
                       <div>
-                        <strong>{facultyName}</strong>
-                        <span className="cls-p-id">{facultyId}</span>
+                        <strong>{activeClassroom.faculty_name || facultyName}</strong>
+                        <span className="cls-p-id">{activeClassroom.faculty_id}</span>
                       </div>
+                      <span style={{ marginLeft: "auto", background: "#e8f0fe", color: "#1a73e8", padding: "2px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>Owner</span>
                     </div>
+                    {/* Co-teachers */}
+                    {coTeachers.map(ct => (
+                      <div key={ct.id} className="cls-person-row">
+                        <div className="cls-p-avatar" style={{ background: "#6200ea" }}>{ct.faculty_name[0]}</div>
+                        <div>
+                          <strong>{ct.faculty_name}</strong>
+                          <span className="cls-p-id">{ct.faculty_id}</span>
+                        </div>
+                        <span style={{ marginLeft: "auto", background: "#f3e8ff", color: "#6200ea", padding: "2px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: 600 }}>Co-Teacher</span>
+                        {/* Owner can remove co-teachers; co-teacher can only remove themselves */}
+                        {(isOwner || ct.faculty_id === facultyId) && (
+                          <button
+                            className="cls-remove-student-btn"
+                            style={{ marginLeft: "8px" }}
+                            title={ct.faculty_id === facultyId ? "Leave this classroom" : "Remove co-teacher"}
+                            onClick={() => ct.faculty_id === facultyId
+                              ? handleLeaveClass(activeClassroom)
+                              : handleRemoveCoTeacher(ct.faculty_id, ct.faculty_name)
+                            }
+                          >
+                            {ct.faculty_id === facultyId ? "Leave" : "🗑️ Remove"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
 
+                  {/* Auto-enroll section */}
                   <div className="cls-people-section" style={{ background: "#f8fafc", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "30px" }}>
                     <h4 style={{ marginTop: 0, marginBottom: "15px", display: "flex", alignItems: "center", gap: "8px" }}>
                       ⚡ Auto-Enroll Students
@@ -447,10 +564,10 @@ const FacultyDashboard = () => {
                     <form onSubmit={handleAutoEnroll} style={{ display: "flex", gap: "10px", alignItems: "flex-end", flexWrap: "wrap" }}>
                       <div className="cls-form-group" style={{ margin: 0, flex: 1, minWidth: "150px" }}>
                         <label style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Target Class</label>
-                        <select 
-                          value={enrollForm.className} 
-                          onChange={e => setEnrollForm({ className: e.target.value, batch: "All" })} 
-                          required 
+                        <select
+                          value={enrollForm.className}
+                          onChange={e => setEnrollForm({ className: e.target.value, batch: "All" })}
+                          required
                           style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", width: "100%" }}
                         >
                           <option value="" disabled>Select Class</option>
@@ -461,9 +578,9 @@ const FacultyDashboard = () => {
                       </div>
                       <div className="cls-form-group" style={{ margin: 0, width: "120px" }}>
                         <label style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Batch</label>
-                        <select 
-                          value={enrollForm.batch} 
-                          onChange={e => setEnrollForm({ ...enrollForm, batch: e.target.value })} 
+                        <select
+                          value={enrollForm.batch}
+                          onChange={e => setEnrollForm({ ...enrollForm, batch: e.target.value })}
                           style={{ padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", width: "100%" }}
                         >
                           <option value="All">All Batches</option>
@@ -483,9 +600,9 @@ const FacultyDashboard = () => {
                           )}
                         </select>
                       </div>
-                      <button 
-                        type="submit" 
-                        disabled={enrolling} 
+                      <button
+                        type="submit"
+                        disabled={enrolling}
                         style={{ padding: "8px 16px", background: activeClassroom.banner_color, color: "white", border: "none", borderRadius: "6px", fontWeight: 600, cursor: enrolling ? "not-allowed" : "pointer", height: "35px" }}
                       >
                         {enrolling ? "Adding..." : "+ Add Students"}
@@ -493,6 +610,7 @@ const FacultyDashboard = () => {
                     </form>
                   </div>
 
+                  {/* Students list */}
                   <div className="cls-people-section">
                     <h4>Students <span className="cls-people-count">{people.length}</span></h4>
                     {people.length === 0 ? (
@@ -537,30 +655,54 @@ const FacultyDashboard = () => {
           <div className="cls-home">
             <div className="cls-home-header">
               <h3>My Classrooms</h3>
-              <button className="cls-create-btn" onClick={() => setShowCreateClass(true)}>+ Create Class</button>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  className="cls-create-btn"
+                  style={{ background: "#fff", color: "#1a73e8", border: "2px solid #1a73e8" }}
+                  onClick={() => setShowJoinClass(true)}
+                >
+                  + Join Class
+                </button>
+                <button className="cls-create-btn" onClick={() => setShowCreateClass(true)}>+ Create Class</button>
+              </div>
             </div>
             {classrooms.length === 0 ? (
               <div className="cls-empty-state">
                 <div className="cls-empty-icon">🏫</div>
                 <h3>No classrooms yet</h3>
-                <p>Create your first classroom to get started</p>
-                <button className="cls-create-btn" onClick={() => setShowCreateClass(true)}>+ Create Class</button>
+                <p>Create your first classroom or join one with a code</p>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "10px" }}>
+                  <button className="cls-create-btn" style={{ background: "#fff", color: "#1a73e8", border: "2px solid #1a73e8" }} onClick={() => setShowJoinClass(true)}>+ Join Class</button>
+                  <button className="cls-create-btn" onClick={() => setShowCreateClass(true)}>+ Create Class</button>
+                </div>
               </div>
             ) : (
               <div className="cls-cards-grid">
                 {classrooms.map(cls => (
                   <div key={cls.id} className="cls-card" onClick={() => openClassroom(cls)}>
                     <div className="cls-card-banner" style={{ background: cls.banner_color }}>
+                      {cls.is_co_teacher && (
+                        <span style={{ position: "absolute", top: "10px", right: "10px", background: "rgba(255,255,255,0.25)", color: "#fff", padding: "2px 8px", borderRadius: "10px", fontSize: "11px", fontWeight: 700, border: "1px solid rgba(255,255,255,0.5)" }}>
+                          👥 Co-Teacher
+                        </span>
+                      )}
                       <h3>{cls.name}</h3>
                       <p>{cls.subject} {cls.section && `· ${cls.section}`}</p>
                     </div>
                     <div className="cls-card-body">
                       <span className="cls-card-code">Code: <strong>{cls.class_code}</strong></span>
                       {cls.room && <span className="cls-card-room">📍 {cls.room}</span>}
+                      {cls.is_co_teacher && (
+                        <span style={{ fontSize: "12px", color: "#6b7280" }}>by {cls.faculty_name}</span>
+                      )}
                     </div>
                     <div className="cls-card-footer">
                       <button className="cls-open-btn">Open →</button>
-                      <button className="cls-del-cls-btn" onClick={(e) => { e.stopPropagation(); handleDeleteClass(cls.id); }}>🗑️</button>
+                      {cls.is_co_teacher ? (
+                        <button className="cls-del-cls-btn" title="Leave classroom" onClick={(e) => { e.stopPropagation(); handleLeaveClass(cls); }}>🚪</button>
+                      ) : (
+                        <button className="cls-del-cls-btn" onClick={(e) => { e.stopPropagation(); handleDeleteClass(cls.id); }}>🗑️</button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -588,6 +730,38 @@ const FacultyDashboard = () => {
       </aside>
 
       <main className="fac-main">{renderContent()}</main>
+
+      {/* ====== JOIN CLASS MODAL ====== */}
+      {showJoinClass && (
+        <div className="cls-modal-overlay">
+          <div className="cls-modal">
+            <h2>👥 Join a Classroom</h2>
+            <p style={{ color: "#6b7280", marginBottom: "20px", fontSize: "14px" }}>
+              Enter the class code shared by the classroom owner to join as a co-teacher with full permissions.
+            </p>
+            <form onSubmit={handleJoinClass}>
+              <div className="cls-form-group">
+                <label>Class Code *</label>
+                <input
+                  placeholder="e.g. ABC123"
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  required
+                  maxLength={8}
+                  style={{ letterSpacing: "3px", fontWeight: 700, fontSize: "18px", textAlign: "center" }}
+                  autoFocus
+                />
+              </div>
+              <div className="cls-modal-actions">
+                <button type="button" className="cls-cancel-btn" onClick={() => { setShowJoinClass(false); setJoinCode(""); }}>Cancel</button>
+                <button type="submit" className="cls-submit-btn" disabled={joining}>
+                  {joining ? "Joining..." : "Join Class"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ====== CREATE CLASS MODAL ====== */}
       {showCreateClass && (
@@ -655,7 +829,6 @@ const FacultyDashboard = () => {
                   </div>
                 </div>
               )}
-              {/* Only allow new attachments if creating a new post, for simplicity */}
               {!editingPostId && (
                 <div className="cls-form-group">
                   <label>Attach Files (optional)</label>

@@ -7,16 +7,43 @@ const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCas
 
 const BANNER_COLORS = ['#1a73e8','#1e8e3e','#d93025','#f29900','#6200ea','#00838f','#c2185b','#4527a0'];
 
-// GET /api/classrooms?faculty_id=X  — faculty's classrooms
+// GET /api/classrooms?faculty_id=X
+// Returns classrooms faculty owns PLUS classrooms they joined as co-teacher
 router.get('/classrooms', async (req, res) => {
   try {
     const { faculty_id } = req.query;
-    let query = supabase.from('classrooms').select('*').order('created_at', { ascending: false });
-    if (faculty_id) query = query.eq('faculty_id', faculty_id);
 
-    const { data, error } = await query;
-    if (error) throw error;
-    res.json(data || []);
+    // 1. Fetch classrooms owned by this faculty
+    let ownedQuery = supabase.from('classrooms').select('*').order('created_at', { ascending: false });
+    if (faculty_id) ownedQuery = ownedQuery.eq('faculty_id', faculty_id);
+    const { data: ownedData, error: ownedErr } = await ownedQuery;
+    if (ownedErr) throw ownedErr;
+
+    // 2. If faculty_id provided, also fetch classrooms joined as co-teacher
+    let joinedClassrooms = [];
+    if (faculty_id) {
+      const { data: memberships, error: mErr } = await supabase
+        .from('faculty_classroom_members')
+        .select('classroom_id')
+        .eq('faculty_id', faculty_id);
+      if (mErr) throw mErr;
+
+      if (memberships && memberships.length > 0) {
+        const joinedIds = memberships.map(m => m.classroom_id);
+        const { data: joinedData, error: jErr } = await supabase
+          .from('classrooms')
+          .select('*')
+          .in('id', joinedIds)
+          .order('created_at', { ascending: false });
+        if (jErr) throw jErr;
+        // Mark each joined classroom as co-teacher
+        joinedClassrooms = (joinedData || []).map(c => ({ ...c, is_co_teacher: true }));
+      }
+    }
+
+    // 3. Merge owned + joined (owned first)
+    const allClassrooms = [...(ownedData || []), ...joinedClassrooms];
+    res.json(allClassrooms);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -54,7 +81,7 @@ router.get('/classrooms/:id/people', async (req, res) => {
       .from('classroom_enrollments')
       .select('*')
       .eq('classroom_id', req.params.id)
-      .order('student_id', { ascending: true }); // Ascending order by ID per user request
+      .order('student_id', { ascending: true });
       
     if (error) throw error;
     if (!enrollments || enrollments.length === 0) return res.json([]);
@@ -83,6 +110,21 @@ router.get('/classrooms/:id/people', async (req, res) => {
   }
 });
 
+// GET /api/classrooms/:id/co-teachers  — list all co-teachers of a classroom
+router.get('/classrooms/:id/co-teachers', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('faculty_classroom_members')
+      .select('*')
+      .eq('classroom_id', req.params.id)
+      .order('joined_at', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/classrooms  — create classroom
 router.post('/classrooms', async (req, res) => {
   try {
@@ -96,6 +138,46 @@ router.post('/classrooms', async (req, res) => {
       .select();
     if (error) throw error;
     res.json({ success: true, message: 'Classroom created', data: data[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/classrooms/faculty-join  — faculty joins another faculty's classroom as co-teacher
+router.post('/classrooms/faculty-join', async (req, res) => {
+  try {
+    const { class_code, faculty_id, faculty_name } = req.body;
+
+    if (!class_code || !faculty_id || !faculty_name) {
+      return res.json({ success: false, message: 'Class code, faculty ID, and name are required' });
+    }
+
+    // Find classroom by code
+    const { data: classroom, error: cErr } = await supabase
+      .from('classrooms')
+      .select('*')
+      .eq('class_code', class_code.trim().toUpperCase())
+      .single();
+    if (cErr || !classroom) return res.json({ success: false, message: 'Invalid class code. Please check and try again.' });
+
+    // Prevent faculty joining their own classroom
+    if (classroom.faculty_id === faculty_id) {
+      return res.json({ success: false, message: 'You are the owner of this classroom.' });
+    }
+
+    // Insert into faculty_classroom_members
+    const { error: insertErr } = await supabase
+      .from('faculty_classroom_members')
+      .insert([{ classroom_id: classroom.id, faculty_id, faculty_name }]);
+
+    if (insertErr) {
+      if (insertErr.code === '23505') {
+        return res.json({ success: false, message: 'You have already joined this classroom.' });
+      }
+      throw insertErr;
+    }
+
+    res.json({ success: true, message: `Successfully joined "${classroom.name}" as co-teacher`, data: { ...classroom, is_co_teacher: true } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -155,6 +237,22 @@ router.delete('/classrooms/:classroomId/students/:studentId', async (req, res) =
       .eq('student_id', studentId);
     if (error) throw error;
     res.json({ success: true, message: 'Student removed from classroom' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// DELETE /api/classrooms/:classroomId/co-teachers/:facultyId  — remove a co-teacher
+router.delete('/classrooms/:classroomId/co-teachers/:facultyId', async (req, res) => {
+  try {
+    const { classroomId, facultyId } = req.params;
+    const { error } = await supabase
+      .from('faculty_classroom_members')
+      .delete()
+      .eq('classroom_id', classroomId)
+      .eq('faculty_id', facultyId);
+    if (error) throw error;
+    res.json({ success: true, message: 'Co-teacher removed from classroom' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
